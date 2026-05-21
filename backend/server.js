@@ -174,6 +174,10 @@ app.post('/api/applications', async (req, res) => {
 });
 
 // Start Server
-app.listen(PORT, () => {
-  console.log(`✅ Backend server is running on http://localhost:${PORT}`);
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log(`✅ Backend server is running on http://localhost:${PORT}`);
+  });
+}
+
+export default app;
