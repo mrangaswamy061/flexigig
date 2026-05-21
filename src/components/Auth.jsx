@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Phone, Mail, UploadCloud, Lock, ArrowRight, Building, Building2, Briefcase, GraduationCap, ChevronLeft, MapPin } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const Auth = ({ onLogin, goHome, initialConfig }) => {
   const [isLogin, setIsLogin] = useState(initialConfig?.isLogin ?? true);
@@ -32,7 +33,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
       const contactInput = e.target.querySelector('input[type="tel"]');
       const contact = contactInput ? contactInput.value : undefined;
       
-      fetch('http://localhost:5004/api/auth/register', {
+      fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, password: 'password', role, contact })
@@ -47,7 +48,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         alert(err.message);
       });
     } else {
-      fetch('http://localhost:5004/api/auth/login', {
+      fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password: 'password', role })

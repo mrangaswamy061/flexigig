@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Award, BookOpen, Star, Settings, FileText, Loader, CheckCircle, Shield, MapPin, Camera, User } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const Profile = ({ userData, onUpdateProfile }) => {
   const [profile, setProfile] = useState(null);
@@ -10,7 +11,7 @@ const Profile = ({ userData, onUpdateProfile }) => {
   const fileInputRef = useRef(null);
 
   useEffect(() => {
-    fetch('http://localhost:5004/api/profile')
+    fetch(`${API_BASE_URL}/api/profile`)
       .then(res => res.json())
       .then(data => {
         const mergedProfile = {
@@ -51,7 +52,7 @@ const Profile = ({ userData, onUpdateProfile }) => {
   const submitReview = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:5004/api/reviews', {
+      const res = await fetch(`${API_BASE_URL}/api/reviews`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newReview)

@@ -9,6 +9,7 @@ import CreateProfile from './components/CreateProfile';
 import Home from './components/Home';
 import AdminDashboard from './components/AdminDashboard';
 import { AnimatePresence, motion } from 'framer-motion';
+import { API_BASE_URL } from './config';
 
 function App() {
   const [showHome, setShowHome] = useState(true);
@@ -49,14 +50,14 @@ function App() {
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
-        const jobsRes = await fetch('http://localhost:5004/api/jobs');
+        const jobsRes = await fetch(`${API_BASE_URL}/api/jobs`);
         if (jobsRes.ok) {
           const jobsData = await jobsRes.json();
           if (jobsData && jobsData.length > 0) {
             setGlobalJobs(jobsData);
           }
         }
-        const appsRes = await fetch('http://localhost:5004/api/applications');
+        const appsRes = await fetch(`${API_BASE_URL}/api/applications`);
         if (appsRes.ok) {
           const appsData = await appsRes.json();
           if (appsData && appsData.length > 0) {
