@@ -1,0 +1,381 @@
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Bell } from 'lucide-react';
+import RealMap from './RealMap';
+
+const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], userProfile, globalJobs = [], setGlobalJobs, goHome }) => {
+  const [currentView, setCurrentView] = useState('dashboard');
+  const myGigs = globalJobs.filter(job => job.employerType === 'Local Business' || job.postedByEmployer);
+  const [showPostModal, setShowPostModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  const handlePostJob = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const title = formData.get('title');
+    const location = formData.get('location');
+
+    let latlng = [28.6139, 77.2090];
+    try {
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+      const data = await res.json();
+      if (data && data.length > 0) {
+        latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+      }
+    } catch (err) {
+      console.error("Geocoding failed:", err);
+    }
+
+    const newJob = {
+      id: Date.now(),
+      title,
+      dept: formData.get('dept'),
+      distance: parseFloat(formData.get('distance')) || 1.0,
+      location,
+      pay: formData.get('pay'),
+      duration: formData.get('duration'),
+      skillLevel: formData.get('skillLevel'),
+      employerType: 'Local Business',
+      type: 'In Person',
+      tags: [title.split(' ')[0]],
+      latlng,
+      coordinates: { x: Math.floor(Math.random() * 70) + 15, y: Math.floor(Math.random() * 70) + 15 }
+    };
+    if(setGlobalJobs) {
+      setGlobalJobs(prev => [newJob, ...prev]);
+    }
+    setShowPostModal(false);
+    e.target.reset();
+  };
+
+  const navItems = [
+    { id: 'dashboard', label: 'Dashboard', icon: Briefcase },
+    { id: 'profile', label: 'Company Profile', icon: User },
+  ];
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <nav className="glass-panel" style={{ margin: '1.5rem 2rem', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          <img src="/logo.png" alt="FlexiGig Logo" style={{ height: '40px', objectFit: 'contain' }} />
+          <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '0.75rem' }}>Employer</span>
+        </div>
+
+        <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.35rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+          {navItems.map(item => {
+            const Icon = item.icon;
+            const isActive = currentView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setCurrentView(item.id)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.25rem',
+                  background: isActive ? 'rgba(139, 92, 246, 0.2)' : 'transparent',
+                  color: isActive ? 'var(--accent)' : 'var(--text-muted)',
+                  borderRadius: '12px', border: 'none', transition: 'all 0.3s', fontWeight: 600, fontSize: '0.95rem'
+                }}
+              >
+                <Icon size={18} color={isActive ? 'var(--accent)' : 'currentColor'} />
+                <span>{item.label}</span>
+              </button>
+            )
+          })}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+          <div style={{ position: 'relative' }}>
+            <button 
+              onClick={() => setShowNotifications(!showNotifications)}
+              style={{ 
+                background: 'rgba(255, 255, 255, 0.05)', 
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                padding: '0.6rem',
+                borderRadius: '50%',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease',
+                cursor: 'pointer'
+              }} className="card-hover">
+              <Bell size={20} />
+              <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-dark)' }} />
+            </button>
+            
+            {showNotifications && (
+              <div style={{ 
+                position: 'absolute', top: '120%', right: '-10px', width: '300px', 
+                background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', 
+                borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 40px rgba(0,0,0,0.8)', zIndex: 100 
+              }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', color: 'white' }}>Notifications</h4>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    <strong style={{ color: 'white' }}>New Application!</strong><br/>A student from State University just applied to your gig.
+                  </div>
+                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+                    <strong style={{ color: 'white' }}>Profile Approved</strong><br/>Your employer profile has been verified.
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-dark)', backgroundImage: userProfile?.profilePic ? `url(${userProfile.profilePic})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }} />
+            <div style={{ paddingRight: '0.75rem' }}>
+              <p style={{ fontSize: '0.9rem', fontWeight: '600', lineHeight: '1' }}>{userProfile?.name?.split(' ')[0] || 'Business'}</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.2rem' }}>Employer</p>
+            </div>
+          </div>
+          <button onClick={goHome} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '12px', color: 'white', fontWeight: '600' }} className="card-hover">
+            Home
+          </button>
+        </div>
+      </nav>
+
+      <main style={{ flex: 1, padding: '1rem 2rem 4rem 2rem', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
+        <AnimatePresence mode="wait">
+          {currentView === 'dashboard' ? (
+            <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
+                <div>
+                  <h2 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px' }}>My Posted Gigs</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', fontWeight: '300' }}>Manage the gigs you've posted for students.</p>
+                </div>
+                <button 
+                  onClick={() => setShowPostModal(true)}
+                  className="btn-primary" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.85rem 1.5rem', borderRadius: '999px', background: 'linear-gradient(135deg, var(--accent), #4c1d95)', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.4)' }}
+                >
+                  <Plus size={20} /> Post New Gig
+                </button>
+              </div>
+
+              {/* Recent Applications & Student Tracking */}
+              {(() => {
+                const myApplications = applications.filter(app => myGigs.some(g => g.id === app.jobId));
+                if (myApplications.length === 0) return null;
+
+                const firstApp = myApplications[0];
+                const appliedJob = myGigs.find(g => g.id === firstApp.jobId);
+                const mockStudentLoc = firstApp.studentLoc || [28.6139, 77.2090]; 
+                return (
+                  <div className="glass-panel" style={{ marginBottom: '3rem', padding: '2rem', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.15)' }}>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '1.5rem', color: 'white' }}>Recent Applications & Live Tracking</h3>
+                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                      <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
+                        {myApplications.map((app, idx) => {
+                          const job = myGigs.find(g => g.id === app.jobId);
+                          return (
+                            <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px', borderLeft: '4px solid #10b981' }}>
+                              <h4 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '0.2rem' }}>{app.studentName}</h4>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{app.studentCollege} • {app.studentMajor}</p>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Applied for: <strong style={{ color: 'white' }}>{job?.title}</strong></p>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Location: <strong style={{ color: 'white' }}>{job?.location}</strong></p>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontWeight: '600', fontSize: '0.85rem' }}>
+                                <MapPin size={16} /> Location Tracking Active
+                              </div>
+                              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                                 <button className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: 'none' }}>Accept</button>
+                                 <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1 }}>Message</button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div style={{ flex: '2 1 400px', height: '350px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
+                        <RealMap 
+                          userRole="employer"
+                          center={appliedJob?.latlng || [28.6239, 77.2000]}
+                          employerJob={appliedJob}
+                          studentLocation={mockStudentLoc}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '2rem' }}>
+                {myGigs.length === 0 ? (
+                  <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed rgba(255,255,255,0.1)' }}>
+                    <Briefcase size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem' }}>No Gigs Posted Yet</h3>
+                    <p style={{ color: 'var(--text-muted)' }}>Click the "Post New Gig" button to hire students.</p>
+                  </div>
+                ) : (
+                  myGigs.map((job, index) => (
+                    <motion.div 
+                      key={job.id} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: index * 0.1 }}
+                      className="glass-panel card-hover" style={{ padding: '2rem', display: 'flex', flexDirection: 'column', border: appliedJobs.includes(job.id) ? '1px solid rgba(139, 92, 246, 0.4)' : undefined, boxShadow: appliedJobs.includes(job.id) ? '0 0 20px rgba(139, 92, 246, 0.15)' : undefined }}
+                    >
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+                        <div>
+                          <h3 style={{ fontSize: '1.35rem', fontWeight: '700', marginBottom: '0.4rem' }}>Job Available: {job.title}</h3>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '1.05rem', fontWeight: '600' }}>
+                            <Building2 size={18} /> Business: {job.dept}
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button 
+                            onClick={() => {
+                              if(setGlobalJobs) setGlobalJobs(globalJobs.map(j => j.id === job.id ? { ...j, status: 'Active' } : j));
+                            }}
+                            style={{ background: job.status !== 'Inactive' ? 'rgba(139, 92, 246, 0.15)' : 'transparent', color: job.status !== 'Inactive' ? 'var(--accent)' : 'var(--text-muted)', padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', border: job.status !== 'Inactive' ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
+                          >
+                            Active
+                          </button>
+                          <button 
+                            onClick={() => {
+                              if(setGlobalJobs) setGlobalJobs(globalJobs.map(j => j.id === job.id ? { ...j, status: 'Inactive' } : j));
+                            }}
+                            style={{ background: job.status === 'Inactive' ? 'rgba(239, 68, 68, 0.15)' : 'transparent', color: job.status === 'Inactive' ? '#ef4444' : 'var(--text-muted)', padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', border: job.status === 'Inactive' ? '1px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(255,255,255,0.1)', cursor: 'pointer', transition: 'all 0.2s' }}
+                          >
+                            Inactive
+                          </button>
+                        </div>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#e4e4e7', fontSize: '0.95rem' }}>
+                          <MapPin size={18} color="var(--primary)" /> Location: {job.location || 'Local Campus Area'}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#e4e4e7', fontSize: '0.95rem' }}>
+                          <IndianRupee size={18} color="var(--primary)" /> Pay: {job.pay}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#e4e4e7', fontSize: '0.95rem' }}>
+                          <Clock size={18} color="var(--primary)" /> Hours: {job.duration}
+                        </div>
+                      </div>
+
+                      <div style={{ marginTop: 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                        <span style={{ fontSize: '0.95rem', color: appliedJobs.includes(job.id) ? 'var(--primary)' : 'var(--text-muted)', fontWeight: appliedJobs.includes(job.id) ? '800' : '500' }}>
+                          {appliedJobs.includes(job.id) ? '🎉 1 Applicant' : '0 Applicants'}
+                        </span>
+                        <div style={{ display: 'flex', gap: '1rem' }}>
+                          <button 
+                            onClick={() => {
+                              if(setGlobalJobs) setGlobalJobs(globalJobs.filter(j => j.id !== job.id));
+                            }}
+                            style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                          >
+                            <X size={16} /> Delete
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </div>
+            </motion.div>
+          ) : (
+            <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}>
+              <div style={{ marginBottom: '3rem' }}>
+                <h2 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px' }}>Company Profile</h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', fontWeight: '300' }}>Manage your business presence on the platform.</p>
+              </div>
+
+              <div className="glass-panel" style={{ padding: '3rem', display: 'flex', gap: '3rem', flexWrap: 'wrap' }}>
+                <div style={{ flex: '0 0 auto', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div style={{ 
+                    width: '180px', height: '180px', borderRadius: '24px', 
+                    background: 'var(--bg-dark)', backgroundImage: userProfile?.profilePic ? `url(${userProfile.profilePic})` : 'none', 
+                    backgroundSize: 'cover', backgroundPosition: 'center',
+                    border: '6px solid rgba(139, 92, 246, 0.2)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.3)'
+                  }} />
+                  <button className="btn-secondary" style={{ marginTop: '1.5rem', width: '100%', borderRadius: '12px' }}>Edit Logo</button>
+                  <button className="btn-primary" style={{ marginTop: '0.75rem', width: '100%', borderRadius: '12px' }}>Edit Profile</button>
+                </div>
+                
+                <div style={{ flex: '1 1 400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div>
+                    <h3 style={{ fontSize: '2.5rem', fontWeight: '800', lineHeight: '1.1', color: 'white' }}>{userProfile?.name || 'Local Business'}</h3>
+                    <p style={{ color: 'var(--accent)', fontSize: '1.2rem', fontWeight: '600', marginTop: '0.5rem' }}>{userProfile?.businessType || 'Retail / Service'}</p>
+                  </div>
+                  
+                  <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                    <p style={{ color: 'var(--text-main)', fontSize: '1.05rem', lineHeight: '1.7' }}>
+                      {userProfile?.about || "We are a local business looking to hire highly motivated students from the campus. We provide flexible hours, competitive pay, and a great working environment!"}
+                    </p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                      <MapPin size={20} color="var(--primary)" /> 
+                      <span style={{ color: 'white' }}>{userProfile?.address || '123 Business Rd'}</span>
+                    </div>
+                    {userProfile?.website && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                        <Globe size={20} color="var(--primary)" /> 
+                        <a href={userProfile.website} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>{userProfile.website}</a>
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
+                      <Mail size={20} color="var(--primary)" /> 
+                      <span style={{ color: 'white' }}>contact@business.com</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </main>
+
+      <AnimatePresence>
+        {showPostModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2.5rem', position: 'relative', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+            >
+              <button onClick={() => setShowPostModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}>
+                <X size={28} />
+              </button>
+              <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '0.5rem' }}>Post a New Gig</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Hire students directly from the campus network.</p>
+              
+              <form onSubmit={handlePostJob} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <input name="title" type="text" placeholder="Gig Title (e.g., Warehouse Assistant)" required className="modal-input" />
+                <input name="dept" type="text" placeholder="Your Business Name" required className="modal-input" defaultValue={userProfile?.name} />
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
+                  <input name="pay" type="text" placeholder="Pay (e.g., ₹400/hr)" required className="modal-input" />
+                  <input name="duration" type="text" placeholder="Duration (e.g., 5 hrs)" required className="modal-input" />
+                  <input name="distance" type="number" step="0.1" min="0" placeholder="Distance to Campus (km)" required className="modal-input" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
+                  <input name="location" type="text" placeholder="Full Address" required className="modal-input" defaultValue={userProfile?.address} />
+                  <select name="skillLevel" required className="modal-input" style={{ appearance: 'none', cursor: 'pointer' }} defaultValue="Unskilled">
+                    <option value="Unskilled">Unskilled (No Exp.)</option>
+                    <option value="Skilled">Skilled (Requires Exp.)</option>
+                  </select>
+                </div>
+                
+                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setShowPostModal(false)} className="btn-secondary">Cancel</button>
+                  <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem' }}>Publish Gig</button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      <style>{`
+        .modal-input {
+          width: 100%; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.15);
+          padding: 1.1rem; border-radius: 12px; color: white; font-family: inherit; font-size: 1rem; transition: all 0.3s ease;
+        }
+        .modal-input:focus { outline: none; border-color: var(--accent); background: rgba(255, 255, 255, 0.06); box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.15); }
+        .modal-input option { background: var(--bg-dark); color: white; }
+      `}</style>
+    </div>
+  );
+};
+
+export default EmployerDashboard;
