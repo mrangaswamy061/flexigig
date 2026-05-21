@@ -24,6 +24,8 @@ app.use((req, res, next) => {
 });
 
 // --- MONGODB CONNECTION ---
+console.log('Database connection string:', process.env.MONGO_URI ? (process.env.MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + process.env.MONGO_URI.split('@')[1] : process.env.MONGO_URI.substring(0, 30)) : 'undefined');
+
 mongoose.connect(process.env.MONGO_URI, {
   tlsAllowInvalidCertificates: true
 })
