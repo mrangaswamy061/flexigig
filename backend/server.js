@@ -24,7 +24,13 @@ app.use((req, res, next) => {
 });
 
 // --- MONGODB CONNECTION ---
-const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
+let MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
+
+// If running in production Vercel cloud but MONGO_URI is pointed to localhost, override it to the cloud Atlas URI
+if (process.env.NODE_ENV === 'production' && (MONGO_URI.includes('localhost') || MONGO_URI.includes('127.0.0.1'))) {
+  console.log('⚠️ Local MONGO_URI detected in production! Overriding to Atlas cloud database...');
+  MONGO_URI = 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
+}
 
 console.log('Database connection string:', MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + MONGO_URI.split('@')[1] : MONGO_URI.substring(0, 30));
 
