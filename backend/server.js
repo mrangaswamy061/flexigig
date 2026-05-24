@@ -243,6 +243,65 @@ app.post('/api/applications', async (req, res) => {
   }
 });
 
+// Stats API
+app.get('/api/stats', async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      const studentCount = mockUsers.filter(u => u.role === 'student').length;
+      const jobCount = mockJobs.length;
+      const totalEarnings = mockUsers
+        .filter(u => u.role === 'student')
+        .reduce((sum, u) => {
+          let earn = 0;
+          if (typeof u.earnings === 'string') {
+            const parsed = parseInt(u.earnings.replace(/[^\d]/g, ''), 10);
+            earn = isNaN(parsed) ? 0 : parsed;
+          } else {
+            earn = u.earnings || 0;
+          }
+          return sum + earn;
+        }, 0);
+      
+      const studentsWithRating = mockUsers.filter(u => u.role === 'student' && u.rating);
+      const avgRating = studentsWithRating.length > 0
+        ? (studentsWithRating.reduce((sum, u) => sum + u.rating, 0) / studentsWithRating.length).toFixed(1)
+        : '5.0';
+
+      return res.json({
+        activeStudents: studentCount,
+        gigsPosted: jobCount,
+        earnedByStudents: totalEarnings,
+        avgRating
+      });
+    }
+
+    const studentCount = await User.countDocuments({ role: 'student' });
+    const jobCount = await Job.countDocuments();
+    
+    const earningsAgg = await User.aggregate([
+      { $match: { role: 'student' } },
+      { $group: { _id: null, total: { $sum: '$earnings' } } }
+    ]);
+    const totalEarnings = earningsAgg.length > 0 ? earningsAgg[0].total : 0;
+
+    const ratingAgg = await User.aggregate([
+      { $match: { role: 'student' } },
+      { $group: { _id: null, avg: { $avg: '$rating' } } }
+    ]);
+    const avgRating = ratingAgg.length > 0 ? ratingAgg[0].avg.toFixed(1) : '5.0';
+
+    res.json({
+      activeStudents: studentCount,
+      gigsPosted: jobCount,
+      earnedByStudents: totalEarnings,
+      avgRating
+    });
+  } catch (err) {
+    console.error('Error fetching stats:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Start Server
 if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {

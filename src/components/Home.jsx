@@ -1,8 +1,35 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, ArrowRight, Users, MapPin, Zap, Shield, Star } from 'lucide-react';
+import { API_BASE_URL } from '../config';
 
 const Home = ({ onGoToLogin }) => {
+  const [stats, setStats] = useState({
+    activeStudents: 0,
+    gigsPosted: 0,
+    earnedByStudents: 0,
+    avgRating: '5.0'
+  });
+
+  useEffect(() => {
+    fetch(`${API_BASE_URL}/api/stats`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to fetch stats');
+        return res.json();
+      })
+      .then(data => {
+        setStats({
+          activeStudents: data.activeStudents ?? 0,
+          gigsPosted: data.gigsPosted ?? 0,
+          earnedByStudents: data.earnedByStudents ?? 0,
+          avgRating: data.avgRating ?? '5.0'
+        });
+      })
+      .catch(err => {
+        console.warn('Could not fetch dynamic stats, using default clean stats for a new website:', err);
+      });
+  }, []);
+
   return (
     <motion.div 
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
@@ -71,10 +98,10 @@ const Home = ({ onGoToLogin }) => {
           style={{ display: 'flex', gap: '3rem', marginTop: '4rem', flexWrap: 'wrap', justifyContent: 'center' }}
         >
           {[
-            { value: '2,500+', label: 'Active Students' },
-            { value: '850+', label: 'Gigs Posted' },
-            { value: '₹5L+', label: 'Earned by Students' },
-            { value: '4.9★', label: 'Avg Rating' }
+            { value: stats.activeStudents, label: 'Active Students' },
+            { value: stats.gigsPosted, label: 'Gigs Posted' },
+            { value: stats.earnedByStudents > 0 ? `₹${stats.earnedByStudents}` : '₹0', label: 'Earned by Students' },
+            { value: `${stats.avgRating}★`, label: 'Avg Rating' }
           ].map((stat, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
               <p style={{ fontSize: '2.25rem', fontWeight: '800', color: 'white', letterSpacing: '-1px' }}>{stat.value}</p>
