@@ -67,8 +67,11 @@ app.post('/api/auth/login', async (req, res) => {
       console.log('⚠️ MongoDB not connected. Falling back to Mock Login.');
       let user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (!user) {
-        user = { id: 'user_' + Date.now(), name: email.split('@')[0], email, role: role || 'student' };
+        user = { id: 'user_' + Date.now(), name: email.split('@')[0], email, role: role || 'student', loginCount: 1, lastLogin: new Date() };
         mockUsers.push(user);
+      } else {
+        user.loginCount = (user.loginCount || 0) + 1;
+        user.lastLogin = new Date();
       }
       return res.json({ message: 'Login successful (Mock Mode)', user });
     }
@@ -77,6 +80,12 @@ app.post('/api/auth/login', async (req, res) => {
     if (!user) {
       return res.status(401).json({ error: 'Account not found. Please register first.' });
     }
+    
+    // Increment loginCount and update lastLogin
+    user.loginCount = (user.loginCount || 0) + 1;
+    user.lastLogin = new Date();
+    await user.save();
+
     res.json({ message: 'Login successful', user });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -247,7 +256,7 @@ app.post('/api/applications', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
   try {
     if (!isMongoConnected()) {
-      const studentCount = mockUsers.filter(u => u.role === 'student').length;
+      const studentCount = mockUsers.filter(u => u.role === 'student' && u.loginCount > 0).length;
       const jobCount = mockJobs.length;
       const totalEarnings = mockUsers
         .filter(u => u.role === 'student')
@@ -275,7 +284,8 @@ app.get('/api/stats', async (req, res) => {
       });
     }
 
-    const studentCount = await User.countDocuments({ role: 'student' });
+    // Only count students who have logged in at least once
+    const studentCount = await User.countDocuments({ role: 'student', loginCount: { $gt: 0 } });
     const jobCount = await Job.countDocuments();
     
     const earningsAgg = await User.aggregate([

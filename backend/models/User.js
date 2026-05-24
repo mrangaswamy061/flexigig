@@ -29,7 +29,9 @@ const userSchema = new mongoose.Schema({
   status: { type: String, default: 'Active' },
   avatar: String,
   location: String,
-  address: String
+  address: String,
+  loginCount: { type: Number, default: 0 },
+  lastLogin: Date
 }, { timestamps: true });
 
 export default mongoose.model('User', userSchema);
