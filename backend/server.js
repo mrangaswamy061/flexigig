@@ -26,9 +26,9 @@ app.use((req, res, next) => {
 // --- MONGODB CONNECTION ---
 let MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
 
-// If running in production Vercel cloud but MONGO_URI is pointed to localhost, override it to the cloud Atlas URI
-if (process.env.NODE_ENV === 'production' && (MONGO_URI.includes('localhost') || MONGO_URI.includes('127.0.0.1'))) {
-  console.log('⚠️ Local MONGO_URI detected in production! Overriding to Atlas cloud database...');
+// If running in production Vercel cloud, ALWAYS force use the verified MongoDB Atlas cloud database!
+if (process.env.NODE_ENV === 'production') {
+  console.log('🚀 Running in production Vercel cloud! Forcing connection to verified MongoDB Atlas database...');
   MONGO_URI = 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
 }
 
