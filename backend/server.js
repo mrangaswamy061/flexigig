@@ -35,7 +35,12 @@ mongoose.connect(MONGO_URI, {
   .then(() => console.log('✅ Connected to MongoDB!'))
   .catch(err => console.error('❌ MongoDB connection error (Running in Mock Fallback Mode):', err));
 
-const isMongoConnected = () => mongoose.connection.readyState === 1;
+const isMongoConnected = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return true; // Force MongoDB mode in production Vercel environments
+  }
+  return mongoose.connection.readyState === 1;
+};
 
 // --- MOCK DATABASE FALLBACK DATA ---
 const mockUsers = [
