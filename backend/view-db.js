@@ -13,7 +13,7 @@ import User from './models/User.js';
 import Job from './models/Job.js';
 import Application from './models/Application.js';
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/flexigig';
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
 
 console.log('Connecting to MongoDB at:', MONGO_URI);
 

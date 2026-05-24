@@ -24,10 +24,12 @@ app.use((req, res, next) => {
 });
 
 // --- MONGODB CONNECTION ---
-console.log('Database connection string:', process.env.MONGO_URI ? (process.env.MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + process.env.MONGO_URI.split('@')[1] : process.env.MONGO_URI.substring(0, 30)) : 'undefined');
+const MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
 
-mongoose.connect(process.env.MONGO_URI, {
-  serverSelectionTimeoutMS: 2000, // Fast fail in 2 seconds to trigger mock mode fallback instantly
+console.log('Database connection string:', MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + MONGO_URI.split('@')[1] : MONGO_URI.substring(0, 30));
+
+mongoose.connect(MONGO_URI, {
+  serverSelectionTimeoutMS: 5000, // Give it 5 seconds to connect securely in the cloud
   tlsAllowInvalidCertificates: true
 })
   .then(() => console.log('✅ Connected to MongoDB!'))
