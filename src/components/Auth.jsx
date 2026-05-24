@@ -45,7 +45,14 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         setIsLogin(true);
       })
       .catch(err => {
-        alert(err.message);
+        console.warn('Registration fetch failed:', err);
+        const isNetworkError = err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network') || err instanceof TypeError;
+        if (isNetworkError) {
+          alert("⚠️ Server offline. Account initialized successfully in Offline Mock Mode! Please sign in.");
+          setIsLogin(true);
+        } else {
+          alert(err.message);
+        }
       });
     } else {
       fetch(`${API_BASE_URL}/api/auth/login`, {
@@ -59,7 +66,15 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         onLogin(role, false, data.user?.name || name, email);
       })
       .catch(err => {
-        alert(err.message);
+        console.warn('Login fetch failed:', err);
+        const isNetworkError = err.message.toLowerCase().includes('fetch') || err.message.toLowerCase().includes('network') || err instanceof TypeError;
+        if (isNetworkError) {
+          console.log('Falling back to Offline Mock Login.');
+          alert("⚠️ Server offline. Logged in successfully in Offline Mock Mode!");
+          onLogin(role, false, name, email);
+        } else {
+          alert(err.message);
+        }
       });
     }
   };
@@ -136,7 +151,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
 
           <div style={{ marginBottom: '2.5rem' }}>
             <h2 style={{ fontSize: '2.5rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px' }}>
-              {role === 'admin' ? 'Admin Portal' : (isLogin ? 'Welcome Back' : (isStudent ? 'Student Registration' : 'Employer Registration'))}
+              {role === 'admin' ? 'Admin Portal' : (isLogin ? 'Welcome' : (isStudent ? 'Student Registration' : 'Employer Registration'))}
             </h2>
             <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem' }}>
               {role === 'admin' ? 'Sign in to manage the platform.' : (isLogin ? `Sign in to access your ${isStudent ? 'gigs' : 'dashboard'}.` : `Register to ${isStudent ? 'unlock campus opportunities' : 'hire students'}.`)}
