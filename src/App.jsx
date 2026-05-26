@@ -87,14 +87,14 @@ function App() {
         const jobsRes = await fetch(`${API_BASE_URL}/api/jobs`);
         if (jobsRes.ok) {
           const jobsData = await jobsRes.json();
-          if (jobsData && jobsData.length > 0) {
+          if (jobsData) {
             setGlobalJobs(jobsData);
           }
         }
         const appsRes = await fetch(`${API_BASE_URL}/api/applications`);
         if (appsRes.ok) {
           const appsData = await appsRes.json();
-          if (appsData && appsData.length > 0) {
+          if (appsData) {
             setApplications(appsData);
           }
         }

@@ -17,7 +17,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   const appliedJobObj = jobs.find(j => appliedJobs.includes(j.id));
 
   useEffect(() => {
-    if (globalJobs && globalJobs.length > 0) {
+    if (globalJobs) {
       setJobs(globalJobs);
       setLoading(false);
     }
