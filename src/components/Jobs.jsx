@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, IndianRupee, Clock, Loader, Bookmark, Building2, Navigation, Map, X, CheckCircle } from 'lucide-react';
 import RealMap from './RealMap';
+import { API_BASE_URL } from '../config';
 
 const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applications = [], setApplications }) => {
   const studentLocation = userProfile?.location || 'Campus Center';
@@ -46,11 +47,11 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
 
     async function fetchIPLocation() {
       try {
-        const res = await fetch('https://ipapi.co/json/');
+        const res = await fetch(`${API_BASE_URL}/api/locate-me`);
         if (res.ok) {
           const ipData = await res.json();
-          if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
-            setMapCenter([parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
+          if (ipData && !isNaN(ipData.lat) && !isNaN(ipData.lon)) {
+            setMapCenter([parseFloat(ipData.lat), parseFloat(ipData.lon)]);
           }
         }
       } catch (err) {

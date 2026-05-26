@@ -154,6 +154,33 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// Locate Client IP (Proxied on server-side to bypass ad-blockers)
+app.get('/api/locate-me', async (req, res) => {
+  try {
+    const rawIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress;
+    const ip = rawIp ? rawIp.split(',')[0].trim() : '';
+    
+    // Fallback URL if running locally
+    const locateUrl = ip && ip !== '127.0.0.1' && ip !== '::1' && !ip.startsWith('192.168.') && !ip.startsWith('10.') && !ip.startsWith('172.16.')
+      ? `https://ipapi.co/${ip}/json/`
+      : 'https://ipapi.co/json/';
+      
+    const geoRes = await fetch(locateUrl);
+    if (geoRes.ok) {
+      const geoData = await geoRes.json();
+      return res.json({
+        lat: geoData.latitude,
+        lon: geoData.longitude,
+        city: geoData.city,
+        country: geoData.country_name
+      });
+    }
+    res.status(500).json({ error: 'Failed to geolocate IP' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Update User Profile
 app.put('/api/users/:email', async (req, res) => {
   try {
