@@ -15,6 +15,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   const [selectedMapJob, setSelectedMapJob] = useState(null);
   const [showMap, setShowMap] = useState(true);
   const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]); // New Delhi fallback
+  const [detectedLocationName, setDetectedLocationName] = useState('New Delhi (Default)');
   const appliedJobObj = jobs.find(j => appliedJobs.includes(j.id));
 
   useEffect(() => {
@@ -33,6 +34,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           const lon = position.coords.longitude;
           if (!isNaN(lat) && !isNaN(lon)) {
             setMapCenter([lat, lon]);
+            setDetectedLocationName('Browser GPS Location');
           }
         },
         (error) => {
@@ -53,6 +55,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           const ipData = await directRes.json();
           if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
             setMapCenter([parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
+            setDetectedLocationName(`${ipData.cityName || 'IP Location'} (${ipData.regionName || ''})`);
             return;
           }
         }
@@ -67,6 +70,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           const ipData = await res.json();
           if (ipData && !isNaN(ipData.lat) && !isNaN(ipData.lon)) {
             setMapCenter([parseFloat(ipData.lat), parseFloat(ipData.lon)]);
+            setDetectedLocationName(`${ipData.city || 'Server IP Location'} (${ipData.country || ''})`);
           }
         }
       } catch (err) {
@@ -88,6 +92,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
             const lon = parseFloat(data[0].lon);
             if (!isNaN(lat) && !isNaN(lon)) {
               setMapCenter([lat, lon]);
+              setDetectedLocationName(`${studentLocation} (Profile Address)`);
             }
           }
         }
@@ -346,9 +351,12 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
               >
                 <div className="glass-panel" style={{ width: '100%', height: 'calc(100vh - 250px)', minHeight: '600px', borderRadius: '24px', position: 'relative', overflow: 'hidden', border: '1px solid rgba(16, 185, 129, 0.2)' }}>
                   
-                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', background: 'rgba(5, 5, 5, 0.8)', backdropFilter: 'blur(8px)', padding: '0.5rem 1rem', borderRadius: '10px', zIndex: 1000, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <div style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }}></div>
-                    <h4 style={{ fontSize: '0.9rem', color: '#e4e4e7', fontWeight: '600' }}>Live Radar Map</h4>
+                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', background: 'rgba(5, 5, 5, 0.8)', backdropFilter: 'blur(8px)', padding: '0.6rem 1.1rem', borderRadius: '12px', zIndex: 1000, border: '1px solid rgba(255,255,255,0.1)', display: 'flex', flexDirection: 'column', gap: '0.2rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <div style={{ width: '8px', height: '8px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 10px #10b981' }}></div>
+                      <h4 style={{ fontSize: '0.9rem', color: '#e4e4e7', fontWeight: '600', margin: 0 }}>Live Radar Map</h4>
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginLeft: '13px' }}>Location: <strong style={{ color: 'var(--primary)' }}>{detectedLocationName}</strong></span>
                   </div>
 
                   <button 

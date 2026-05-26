@@ -25,6 +25,7 @@ const RealMap = ({ jobs = [], center, selectedJob, appliedJob, userRole, employe
     setTimeout(() => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.invalidateSize();
+        mapInstanceRef.current.setView(center, 13);
       }
     }, 500);
 
