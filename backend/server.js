@@ -57,10 +57,7 @@ const mockUsers = [
   { id: '4', name: 'System Admin', email: 'admin@example.com', role: 'admin' }
 ];
 
-const mockJobs = [
-  { id: 'j1', title: 'Research Assistant', dept: 'Psychology Dept', type: 'On Campus', employerType: 'Campus', distance: 0.5, location: 'Main Campus', pay: '₹400/hr', duration: '10 hrs/wk', tags: ['Research', 'Data'], skillLevel: 'Skilled', latlng: [28.6139, 77.2090] },
-  { id: 'j2', title: 'Barista (Part-time)', dept: 'Local Coffee Shop', type: 'In Person', employerType: 'Local Business', distance: 1.2, location: 'Downtown Avenue', pay: '₹250/hr', duration: '15 hrs/wk', tags: ['Customer Service'], skillLevel: 'Unskilled', latlng: [28.6189, 77.2190] }
-];
+const mockJobs = [];
 
 const mockApplications = [];
 

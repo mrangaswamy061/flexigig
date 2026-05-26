@@ -13,6 +13,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   const [loading, setLoading] = useState(true);
   const [selectedMapJob, setSelectedMapJob] = useState(null);
   const [showMap, setShowMap] = useState(true);
+  const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]); // New Delhi fallback
   const appliedJobObj = jobs.find(j => appliedJobs.includes(j.id));
 
   useEffect(() => {
@@ -21,6 +22,25 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
       setLoading(false);
     }
   }, [globalJobs]);
+
+  useEffect(() => {
+    if (!studentLocation || studentLocation === 'Campus Center') return;
+
+    const geocodeStudentLocation = async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(studentLocation)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.length > 0) {
+            setMapCenter([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+          }
+        }
+      } catch (err) {
+        console.error("Geocoding student location failed:", err);
+      }
+    };
+    geocodeStudentLocation();
+  }, [studentLocation]);
 
 
   const filteredJobs = jobs.filter(j => {
@@ -305,10 +325,11 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
 
                   <RealMap 
                     jobs={filteredJobs} 
-                    center={[28.6139, 77.2090]} 
+                    center={mapCenter} 
                     selectedJob={selectedMapJob} 
                     appliedJob={appliedJobObj}
                     userRole="student"
+                    studentLocation={studentLocation}
                   />
 
                 </div>

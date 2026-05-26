@@ -16,6 +16,7 @@ const jobSchema = new mongoose.Schema({
     default: [28.6139, 77.2090]
   },
   postedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  postedByEmail: { type: String },
   status: { type: String, default: 'Active' }
 }, { timestamps: true });
 

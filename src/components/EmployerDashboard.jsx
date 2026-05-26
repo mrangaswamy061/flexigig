@@ -65,7 +65,6 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
     }
 
     const newJob = {
-      id: Date.now(),
       title,
       dept: formData.get('dept'),
       distance: parseFloat(formData.get('distance')) || 1.0,
@@ -80,8 +79,32 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
       coordinates: { x: Math.floor(Math.random() * 70) + 15, y: Math.floor(Math.random() * 70) + 15 },
       postedByEmail: userProfile?.email || 'employer@example.com'
     };
-    if(setGlobalJobs) {
-      setGlobalJobs(prev => [newJob, ...prev]);
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/jobs`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(newJob)
+      });
+      if (response.ok) {
+        const savedJob = await response.json();
+        if (setGlobalJobs) {
+          setGlobalJobs(prev => [savedJob, ...prev]);
+        }
+      } else {
+        const fallbackJob = { ...newJob, id: Date.now() };
+        if (setGlobalJobs) {
+          setGlobalJobs(prev => [fallbackJob, ...prev]);
+        }
+      }
+    } catch (err) {
+      console.warn("Backend offline or error posting job. Posting locally.", err);
+      const fallbackJob = { ...newJob, id: Date.now() };
+      if (setGlobalJobs) {
+        setGlobalJobs(prev => [fallbackJob, ...prev]);
+      }
     }
     
     // Deduct credit if they don't have an active unlimited subscription

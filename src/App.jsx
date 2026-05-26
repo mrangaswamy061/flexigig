@@ -65,9 +65,7 @@ function App() {
     });
   };
 
-  const [globalJobs, setGlobalJobs] = useState([
-    { id: 1, title: 'Research Assistant', dept: 'Psychology Dept', type: 'On Campus', employerType: 'Campus', distance: 0.5, location: 'Main Campus', pay: '₹400/hr', duration: '10 hrs/wk', tags: ['Research', 'Data'], skillLevel: 'Skilled', latlng: [28.6139, 77.2090], coordinates: { x: 55, y: 45 }, postedByEmail: 'psychology@example.com' }
-  ]);
+  const [globalJobs, setGlobalJobs] = useState([]);
 
   const [students, setStudents] = useState([
     { id: 1, name: 'Alex Johnson', college: 'Delhi University', major: 'B.Tech CS', appliedJobs: [2, 5], rating: 4.8, completedGigs: 12, earnings: '₹14,400', status: 'Active', avatar: 'AJ' },
@@ -160,7 +158,7 @@ function App() {
   };
 
   const renderStudentView = () => {
-    const studentJobs = globalJobs.filter(j => j.employerType === 'Local Business' || j.postedByEmployer);
+    const studentJobs = globalJobs.filter(j => j.status !== 'Inactive');
     switch (currentView) {
       case 'dashboard':
         return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;

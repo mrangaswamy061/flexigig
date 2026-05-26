@@ -55,7 +55,7 @@ const RealMap = ({ jobs = [], center, selectedJob, appliedJob, userRole, employe
     // Add student center marker
     if (userRole === 'student') {
       const centerMarker = window.L.marker(center, { icon: studentIcon }).addTo(map)
-        .bindPopup('<b>Your Location</b><br/>Campus Center');
+        .bindPopup(`<b>Your Location</b><br/>${studentLocation || 'Campus Center'}`);
       markersRef.current.push(centerMarker);
     }
 
