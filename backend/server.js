@@ -39,7 +39,8 @@ mongoose.set('bufferCommands', false);
 
 mongoose.connect(MONGO_URI, {
   serverSelectionTimeoutMS: 5000, // Give it 5 seconds to connect securely in the cloud
-  tlsAllowInvalidCertificates: true
+  tlsAllowInvalidCertificates: true,
+  family: 4 // Force IPv4 to prevent Node 18+ hostname resolution hangs in serverless environments
 })
   .then(() => console.log('✅ Connected to MongoDB!'))
   .catch(err => console.error('❌ MongoDB connection error (Running in Mock Fallback Mode):', err));
