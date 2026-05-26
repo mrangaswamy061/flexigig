@@ -122,9 +122,19 @@ function App() {
     setUserEmail('');
   };
 
-  const handleProfileComplete = (data) => {
+  const handleProfileComplete = async (data) => {
     setUserProfile(data);
     setNeedsProfile(false);
+
+    try {
+      await fetch(`${API_BASE_URL}/api/users/${userEmail}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+    } catch (err) {
+      console.warn("Backend offline or error updating profile in DB:", err);
+    }
     
     if (userRole === 'student') {
       setStudents(prev => [...prev, {
@@ -168,7 +178,18 @@ function App() {
       case 'jobs':
         return <Jobs key="jobs" userProfile={{ name: userName, email: userEmail, ...userProfile }} appliedJobs={appliedJobs} setAppliedJobs={handleSetAppliedJobs} globalJobs={studentJobs} applications={applications} setApplications={handleSetApplications} />;
       case 'profile':
-        return <Profile key="profile" userData={{ name: userName, email: userEmail, ...userProfile }} onUpdateProfile={(data) => setUserProfile(prev => ({ ...prev, ...data }))} />;
+        return <Profile key="profile" userData={{ name: userName, email: userEmail, ...userProfile }} onUpdateProfile={async (data) => {
+          setUserProfile(prev => ({ ...prev, ...data }));
+          try {
+            await fetch(`${API_BASE_URL}/api/users/${userEmail}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(data)
+            });
+          } catch (err) {
+            console.warn("Backend offline or error updating profile in DB:", err);
+          }
+        }} />;
       default:
         return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;
     }

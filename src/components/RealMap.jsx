@@ -23,8 +23,10 @@ const RealMap = ({ jobs = [], center, selectedJob, appliedJob, userRole, employe
     const map = mapInstanceRef.current;
     map.setView(center, 13);
     setTimeout(() => {
-      map.invalidateSize();
-    }, 100);
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    }, 500);
 
     // Clear old markers
     markersRef.current.forEach(m => map.removeLayer(m));

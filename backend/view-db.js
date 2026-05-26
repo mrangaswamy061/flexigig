@@ -37,7 +37,7 @@ mongoose.connect(MONGO_URI, {
     } else {
       users.forEach(u => {
         console.log(`  - [${u.role.toUpperCase()}] ${u.name} (${u.email})`);
-        console.log(`    Logins: ${u.loginCount || 0} | Status: ${u.status} | Earnings: ₹${u.earnings || 0}`);
+        console.log(`    Logins: ${u.loginCount || 0} | Status: ${u.status} | Location: ${u.location || 'N/A'} | Address: ${u.address || 'N/A'}`);
       });
     }
     

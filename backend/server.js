@@ -154,6 +154,27 @@ app.get('/api/users', async (req, res) => {
   }
 });
 
+// Update User Profile
+app.put('/api/users/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    if (!isMongoConnected()) {
+      return res.json({ message: 'Profile updated locally (Mock Mode)', user: req.body });
+    }
+    const updatedUser = await User.findOneAndUpdate(
+      { email: email.toLowerCase() },
+      { $set: req.body },
+      { new: true }
+    );
+    if (!updatedUser) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Profile updated successfully', user: updatedUser });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Profile & Reviews
 app.get('/api/profile', (req, res) => {
   res.json({
