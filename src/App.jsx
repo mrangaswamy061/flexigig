@@ -19,18 +19,54 @@ function App() {
   const [needsProfile, setNeedsProfile] = useState(false);
   const [userProfile, setUserProfile] = useState(null);
   const [userName, setUserName] = useState('Alex Johnson');
+  const [userEmail, setUserEmail] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
-  const [appliedJobs, setAppliedJobs] = useState([]);
-  const [applications, setApplications] = useState([]);
+  
+  // Dictionary state of applied jobs keyed by student email
+  const [appliedJobsByEmail, setAppliedJobsByEmail] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flexigig_appliedJobs');
+      return saved ? JSON.parse(saved) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  const [applications, setApplications] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flexigig_applications');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Get student-specific applied jobs list
+  const appliedJobs = userEmail ? (appliedJobsByEmail[userEmail] || []) : [];
+
+  // Update student-specific applied jobs list and persist to localStorage
+  const handleSetAppliedJobs = (updater) => {
+    if (!userEmail) return;
+    setAppliedJobsByEmail(prev => {
+      const currentApplied = prev[userEmail] || [];
+      const nextApplied = typeof updater === 'function' ? updater(currentApplied) : updater;
+      const updated = { ...prev, [userEmail]: nextApplied };
+      localStorage.setItem('flexigig_appliedJobs', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  // Persist applications to localStorage
+  const handleSetApplications = (updater) => {
+    setApplications(prev => {
+      const nextApps = typeof updater === 'function' ? updater(prev) : updater;
+      localStorage.setItem('flexigig_applications', JSON.stringify(nextApps));
+      return nextApps;
+    });
+  };
+
   const [globalJobs, setGlobalJobs] = useState([
-    { id: 1, title: 'Research Assistant', dept: 'Psychology Dept', type: 'On Campus', employerType: 'Campus', distance: 0.5, location: 'Main Campus', pay: '₹400/hr', duration: '10 hrs/wk', tags: ['Research', 'Data'], skillLevel: 'Skilled', latlng: [28.6139, 77.2090], coordinates: { x: 55, y: 45 } },
-    { id: 2, title: 'Barista (Part-time)', dept: 'Local Coffee Shop', type: 'In Person', employerType: 'Local Business', distance: 1.2, location: 'Downtown Avenue', pay: '₹250/hr', duration: '15 hrs/wk', tags: ['Customer Service'], skillLevel: 'Unskilled', latlng: [28.6189, 77.2190], coordinates: { x: 40, y: 60 } },
-    { id: 3, title: 'Dog Walker', dept: 'Neighborhood Pet Care', type: 'In Person', employerType: 'Local Business', distance: 2.5, location: 'West End', pay: '₹300/hr', duration: 'Flexible', tags: ['Pets', 'Outdoors'], skillLevel: 'Unskilled', latlng: [28.6089, 77.1990], coordinates: { x: 20, y: 30 } },
-    { id: 4, title: 'Graphic Designer', dept: 'Local Marketing Agency', type: 'Hybrid', employerType: 'Local Business', distance: 3.5, location: 'Tech Park', pay: '₹800/hr', duration: 'Flexible', tags: ['Design'], skillLevel: 'Skilled', latlng: [28.6239, 77.2000], coordinates: { x: 80, y: 80 } },
-    { id: 5, title: 'Event Setup Assistant', dept: 'City Community Center', type: 'In Person', employerType: 'Local Business', distance: 1.8, location: 'City Hall', pay: '₹350/hr', duration: 'Weekends', tags: ['Physical', 'Events'], skillLevel: 'Unskilled', latlng: [28.6100, 77.2200], coordinates: { x: 60, y: 20 } },
-    { id: 6, title: 'Flyer Distributor', dept: 'Joe\'s Pizzeria', type: 'In Person', employerType: 'Local Business', distance: 4.0, location: 'Campus Area', pay: '₹200/hr', duration: '4 hrs/wk', tags: ['Marketing', 'Walking'], skillLevel: 'Unskilled', latlng: [28.6200, 77.1900], coordinates: { x: 10, y: 90 } },
-    { id: 7, title: 'Fitness Instructor', dept: 'City Gym', type: 'In Person', employerType: 'Local Business', distance: 2.1, location: 'Main Street', pay: '₹600/hr', duration: 'Early Mornings', tags: ['Fitness'], skillLevel: 'Skilled', latlng: [28.6050, 77.2150], coordinates: { x: 70, y: 40 } },
-    { id: 8, title: 'Lawn Care & Raking', dept: 'Private Residence', type: 'In Person', employerType: 'Local Business', distance: 3.0, location: 'Suburbs', pay: '₹300/hr', duration: 'One-time', tags: ['Physical', 'Outdoors'], skillLevel: 'Unskilled', latlng: [28.6250, 77.2250], coordinates: { x: 30, y: 80 } }
+    { id: 1, title: 'Research Assistant', dept: 'Psychology Dept', type: 'On Campus', employerType: 'Campus', distance: 0.5, location: 'Main Campus', pay: '₹400/hr', duration: '10 hrs/wk', tags: ['Research', 'Data'], skillLevel: 'Skilled', latlng: [28.6139, 77.2090], coordinates: { x: 55, y: 45 }, postedByEmail: 'psychology@example.com' }
   ]);
 
   const [students, setStudents] = useState([
@@ -71,16 +107,18 @@ function App() {
     fetchBackendData();
   }, []);
 
-  const handleLogin = (role, isNewUser, name) => {
+  const handleLogin = (role, isNewUser, name, email) => {
     setUserRole(role);
     setIsLoggedIn(true);
     setNeedsProfile(isNewUser);
     if (name) setUserName(name);
+    if (email) setUserEmail(email);
   };
 
   const handleLogout = () => {
     setIsLoggedIn(false);
     setUserRole(null);
+    setUserEmail('');
   };
 
   const handleProfileComplete = (data) => {
@@ -125,13 +163,13 @@ function App() {
     const studentJobs = globalJobs.filter(j => j.employerType === 'Local Business' || j.postedByEmployer);
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, ...userProfile }} globalJobs={studentJobs} />;
+        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;
       case 'jobs':
-        return <Jobs key="jobs" userProfile={{ name: userName, ...userProfile }} appliedJobs={appliedJobs} setAppliedJobs={setAppliedJobs} globalJobs={studentJobs} applications={applications} setApplications={setApplications} />;
+        return <Jobs key="jobs" userProfile={{ name: userName, email: userEmail, ...userProfile }} appliedJobs={appliedJobs} setAppliedJobs={handleSetAppliedJobs} globalJobs={studentJobs} applications={applications} setApplications={handleSetApplications} />;
       case 'profile':
-        return <Profile key="profile" userData={{ name: userName, ...userProfile }} onUpdateProfile={(data) => setUserProfile(prev => ({ ...prev, ...data }))} />;
+        return <Profile key="profile" userData={{ name: userName, email: userEmail, ...userProfile }} onUpdateProfile={(data) => setUserProfile(prev => ({ ...prev, ...data }))} />;
       default:
-        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, ...userProfile }} globalJobs={studentJobs} />;
+        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;
     }
   };
 
@@ -155,11 +193,11 @@ function App() {
           </motion.div>
         ) : userRole === 'employer' ? (
           <motion.div key="employer-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} userProfile={{ name: userName, ...userProfile }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
+            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
           </motion.div>
         ) : (
           <motion.div key="student-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <Navbar currentView={currentView} setCurrentView={setCurrentView} userProfile={{ name: userName, ...userProfile }} goHome={goHome} />
+            <Navbar currentView={currentView} setCurrentView={setCurrentView} userProfile={{ name: userName, email: userEmail, ...userProfile }} goHome={goHome} />
             <main style={{ flex: 1, padding: '1rem 2rem 4rem 2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
               <AnimatePresence mode="wait">
                 <motion.div

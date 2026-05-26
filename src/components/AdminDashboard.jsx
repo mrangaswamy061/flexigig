@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Briefcase, FileText, CheckCircle, Search, Star, MapPin, Clock, IndianRupee, ArrowUpRight, ShieldAlert, GraduationCap, Filter, Eye, Building2 } from 'lucide-react';
 import RealMap from './RealMap';
+import { API_BASE_URL } from '../config';
 
 
 
@@ -29,6 +30,19 @@ const Badge = ({ label, color }) => (
 const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [], setStudents, employers = [], setEmployers }) => {
   const [tab, setTab] = useState('Overview');
   const [search, setSearch] = useState('');
+
+  const handleDeleteJob = async (id) => {
+    try {
+      await fetch(`${API_BASE_URL}/api/jobs/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn("Backend offline or error deleting job. Deleting locally.", err);
+    }
+    if (setGlobalJobs) {
+      setGlobalJobs(prev => prev.filter(j => j.id !== id));
+    }
+  };
 
   const tabs = ['Overview', 'Students', 'Employers', 'Jobs & Applications'];
 
@@ -304,7 +318,7 @@ const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [],
                       </div>
                       <div style={{ flex: '1 1 100px', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                         <button 
-                          onClick={() => setGlobalJobs(globalJobs.filter(j => j.id !== job.id))} 
+                          onClick={() => handleDeleteJob(job.id)} 
                           style={{ background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '0.5rem 1rem', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}
                         >
                           Delete Job

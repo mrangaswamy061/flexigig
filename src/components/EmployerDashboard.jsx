@@ -2,12 +2,50 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Bell } from 'lucide-react';
 import RealMap from './RealMap';
+import { API_BASE_URL } from '../config';
 
 const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], userProfile, globalJobs = [], setGlobalJobs, goHome }) => {
   const [currentView, setCurrentView] = useState('dashboard');
-  const myGigs = globalJobs.filter(job => job.employerType === 'Local Business' || job.postedByEmployer);
+  const myGigs = globalJobs.filter(job => job.postedByEmail === userProfile?.email);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+
+  // Subscription state keyed by employer's email
+  const [subscriptionState, setSubscriptionState] = useState(() => {
+    try {
+      const saved = localStorage.getItem(`subscription_${userProfile?.email}`);
+      return saved ? JSON.parse(saved) : { credits: 0, subscriptionActiveUntil: null };
+    } catch {
+      return { credits: 0, subscriptionActiveUntil: null };
+    }
+  });
+
+  const saveSubscriptionState = (newState) => {
+    setSubscriptionState(newState);
+    localStorage.setItem(`subscription_${userProfile?.email}`, JSON.stringify(newState));
+  };
+
+  const hasActiveSubscription = subscriptionState.subscriptionActiveUntil && new Date(subscriptionState.subscriptionActiveUntil) > new Date();
+  const hasCredits = subscriptionState.credits > 0;
+  const canPostGig = hasActiveSubscription || hasCredits;
+
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPlan, setSelectedPlan] = useState(null); // 'single' or 'unlimited'
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState(false);
+
+  const handleDeleteJob = async (id) => {
+    try {
+      await fetch(`${API_BASE_URL}/api/jobs/${id}`, {
+        method: 'DELETE'
+      });
+    } catch (err) {
+      console.warn("Backend offline or error deleting job. Deleting locally.", err);
+    }
+    if (setGlobalJobs) {
+      setGlobalJobs(prev => prev.filter(j => j.id !== id));
+    }
+  };
 
   const handlePostJob = async (e) => {
     e.preventDefault();
@@ -39,11 +77,21 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
       type: 'In Person',
       tags: [title.split(' ')[0]],
       latlng,
-      coordinates: { x: Math.floor(Math.random() * 70) + 15, y: Math.floor(Math.random() * 70) + 15 }
+      coordinates: { x: Math.floor(Math.random() * 70) + 15, y: Math.floor(Math.random() * 70) + 15 },
+      postedByEmail: userProfile?.email || 'employer@example.com'
     };
     if(setGlobalJobs) {
       setGlobalJobs(prev => [newJob, ...prev]);
     }
+    
+    // Deduct credit if they don't have an active unlimited subscription
+    if (!hasActiveSubscription && hasCredits) {
+      saveSubscriptionState({
+        ...subscriptionState,
+        credits: subscriptionState.credits - 1
+      });
+    }
+
     setShowPostModal(false);
     e.target.reset();
   };
@@ -142,10 +190,31 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <h2 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px' }}>My Posted Gigs</h2>
-                  <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', fontWeight: '300' }}>Manage the gigs you've posted for students.</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.5rem', flexWrap: 'wrap' }}>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', fontWeight: '300', margin: 0 }}>Manage the gigs you've posted for students.</p>
+                    {hasActiveSubscription ? (
+                      <span style={{ fontSize: '0.8rem', background: 'rgba(16, 185, 129, 0.15)', color: '#10b981', padding: '0.3rem 0.8rem', borderRadius: '999px', fontWeight: '700', border: '1px solid rgba(16, 185, 129, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        🛡️ Unlimited Plan Active
+                      </span>
+                    ) : hasCredits ? (
+                      <span style={{ fontSize: '0.8rem', background: 'rgba(251, 191, 36, 0.15)', color: '#fbbf24', padding: '0.3rem 0.8rem', borderRadius: '999px', fontWeight: '700', border: '1px solid rgba(251, 191, 36, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        💎 {subscriptionState.credits} Post Credit{subscriptionState.credits > 1 ? 's' : ''} Left
+                      </span>
+                    ) : (
+                      <span style={{ fontSize: '0.8rem', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', padding: '0.3rem 0.8rem', borderRadius: '999px', fontWeight: '700', border: '1px solid rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+                        ⚠️ Plan Expired (Buy Credits to Post Gigs)
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <button 
-                  onClick={() => setShowPostModal(true)}
+                  onClick={() => {
+                    if (canPostGig) {
+                      setShowPostModal(true);
+                    } else {
+                      setShowPaymentModal(true);
+                    }
+                  }}
                   className="btn-primary" 
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.85rem 1.5rem', borderRadius: '999px', background: 'linear-gradient(135deg, var(--accent), #4c1d95)', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.4)' }}
                 >
@@ -256,9 +325,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                         </span>
                         <div style={{ display: 'flex', gap: '1rem' }}>
                           <button 
-                            onClick={() => {
-                              if(setGlobalJobs) setGlobalJobs(globalJobs.filter(j => j.id !== job.id));
-                            }}
+                            onClick={() => handleDeleteJob(job.id)}
                             style={{ background: 'transparent', border: 'none', color: '#ef4444', fontWeight: '600', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.25rem' }}
                           >
                             <X size={16} /> Delete
@@ -362,6 +429,180 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                   <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem' }}>Publish Gig</button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {showPaymentModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(12px)', zIndex: 101, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 30 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 30 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '750px', padding: '3rem', position: 'relative', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 25px 60px rgba(0,0,0,0.6)' }}
+            >
+              <button 
+                onClick={() => {
+                  setShowPaymentModal(false);
+                  setIsVerifying(false);
+                  setPaymentSuccess(false);
+                  setSelectedPlan(null);
+                }} 
+                style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}
+              >
+                <X size={28} />
+              </button>
+
+              {paymentSuccess ? (
+                // Success screen
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
+                  style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', padding: '2rem 0' }}
+                >
+                  <div style={{ 
+                    width: '90px', height: '90px', borderRadius: '50%', background: 'rgba(16, 185, 129, 0.2)', 
+                    border: '2px solid #10b981', display: 'flex', justifyContent: 'center', alignItems: 'center', 
+                    marginBottom: '2rem', boxShadow: '0 0 35px rgba(16, 185, 129, 0.4)' 
+                  }}>
+                    <motion.span 
+                      initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ delay: 0.2, type: 'spring' }}
+                      style={{ fontSize: '2.5rem', color: '#10b981' }}
+                    >
+                      ✓
+                    </motion.span>
+                  </div>
+                  <h2 style={{ fontSize: '2.25rem', fontWeight: '800', marginBottom: '0.75rem', color: 'white' }}>Payment Verified!</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '400px', marginBottom: '2.5rem', lineHeight: '1.6' }}>
+                    Your posting plan has been successfully credited and unlocked. You can now post your gig!
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setShowPaymentModal(false);
+                      setPaymentSuccess(false);
+                      setSelectedPlan(null);
+                      setShowPostModal(true); // Open the post gig modal!
+                    }}
+                    className="btn-primary" 
+                    style={{ background: 'linear-gradient(135deg, #10b981, #059669)', padding: '0.9rem 2.5rem', borderRadius: '999px', fontSize: '1.1rem', fontWeight: '700', cursor: 'pointer', boxShadow: '0 5px 20px rgba(16, 185, 129, 0.3)' }}
+                  >
+                    Post Gig Now
+                  </button>
+                </motion.div>
+              ) : isVerifying ? (
+                // Verification screen
+                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  <div className="lucide-spin" style={{ margin: '0 auto 2rem', width: '60px', height: '60px', borderRadius: '50%', border: '4px solid rgba(139, 92, 246, 0.2)', borderTopColor: 'var(--accent)' }}></div>
+                  <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '1rem', color: 'white' }}>Verifying Your Payment</h2>
+                  <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: '500px', margin: '0 auto 2rem', lineHeight: '1.6' }}>
+                    We launched your secure Razorpay checkout page in a new window. Please complete the transfer of <strong>{selectedPlan === 'single' ? '₹29' : '₹199'}</strong>, then click below to instantly unlock.
+                  </p>
+                  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                    <button 
+                      onClick={() => {
+                        setIsVerifying(false);
+                        setSelectedPlan(null);
+                      }} 
+                      className="btn-secondary" 
+                      style={{ padding: '0.85rem 1.8rem', borderRadius: '12px' }}
+                    >
+                      Go Back
+                    </button>
+                    <button 
+                      onClick={() => {
+                        // Simulate verified delay
+                        setTimeout(() => {
+                          if (selectedPlan === 'single') {
+                            saveSubscriptionState({
+                              ...subscriptionState,
+                              credits: subscriptionState.credits + 1
+                            });
+                          } else {
+                            const oneMonthFromNow = new Date();
+                            oneMonthFromNow.setDate(oneMonthFromNow.getDate() + 30);
+                            saveSubscriptionState({
+                              ...subscriptionState,
+                              subscriptionActiveUntil: oneMonthFromNow.toISOString()
+                            });
+                          }
+                          setPaymentSuccess(true);
+                          setIsVerifying(false);
+                        }, 800);
+                      }}
+                      className="btn-primary" 
+                      style={{ padding: '0.85rem 2.2rem', borderRadius: '12px', background: 'linear-gradient(135deg, var(--accent), #4c1d95)' }}
+                    >
+                      Verify & Unlock Gig
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                // Plan Selector Screen
+                <div>
+                  <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+                    <h2 style={{ fontSize: '2.25rem', fontWeight: '800', marginBottom: '0.5rem', color: 'white' }}>Choose Your Gig Posting Plan</h2>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', fontWeight: '300' }}>Access motivated student talent across local and campus communities.</p>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+                    {/* Single Pass Card */}
+                    <div className="glass-panel card-hover" style={{ flex: '1 1 300px', padding: '2rem', display: 'flex', flexDirection: 'column', border: '1px solid rgba(255, 255, 255, 0.08)', background: 'rgba(255,255,255,0.02)', borderRadius: '20px' }}>
+                      <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '1px' }}>One-time Pass</span>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: '800', margin: '0.5rem 0' }}>Single Gig Post</h3>
+                      <div style={{ display: 'flex', alignItems: 'baseline', margin: '1rem 0' }}>
+                        <span style={{ fontSize: '3rem', fontWeight: '900', color: 'white' }}>₹29</span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: '0.25rem' }}>/per gig post</span>
+                      </div>
+                      <div style={{ margin: '1.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>✨ <span>Post 1 high-visibility gig</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🗺️ <span>Live radar tracking active</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>📁 <span>Review student applications</span></div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedPlan('single');
+                          setIsVerifying(true);
+                          window.open('https://razorpay.me/@vishwanaththippayanadurgavenk', '_blank', 'noopener,noreferrer');
+                        }}
+                        className="btn-secondary" 
+                        style={{ marginTop: 'auto', width: '100%', padding: '0.85rem', borderRadius: '12px', fontWeight: '700', fontSize: '1rem' }}
+                      >
+                        Buy Gig Pass
+                      </button>
+                    </div>
+
+                    {/* Monthly Subscription Card */}
+                    <div className="glass-panel card-hover" style={{ flex: '1 1 300px', padding: '2rem', display: 'flex', flexDirection: 'column', border: '2px solid rgba(139, 92, 246, 0.4)', background: 'linear-gradient(180deg, rgba(139, 92, 246, 0.05) 0%, rgba(0,0,0,0.6) 100%)', borderRadius: '20px', position: 'relative' }}>
+                      <div style={{ position: 'absolute', top: '1.25rem', right: '1.25rem', background: 'rgba(139, 92, 246, 0.2)', color: 'var(--accent)', border: '1px solid rgba(139, 92, 246, 0.4)', padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.7rem', fontWeight: '800', letterSpacing: '0.5px' }}>BEST VALUE</div>
+                      <span style={{ fontSize: '0.8rem', textTransform: 'uppercase', color: 'var(--accent)', fontWeight: '700', letterSpacing: '1px' }}>Monthly Membership</span>
+                      <h3 style={{ fontSize: '1.75rem', fontWeight: '800', margin: '0.5rem 0' }}>Premium Monthly</h3>
+                      <div style={{ display: 'flex', alignItems: 'baseline', margin: '1rem 0' }}>
+                        <span style={{ fontSize: '3rem', fontWeight: '900', color: 'white' }}>₹199</span>
+                        <span style={{ color: 'var(--text-muted)', marginLeft: '0.25rem' }}>/per month</span>
+                      </div>
+                      <div style={{ margin: '1.5rem 0', display: 'flex', flexDirection: 'column', gap: '0.75rem', fontSize: '0.95rem', color: 'var(--text-main)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🚀 <span>Post <strong>unlimited gigs</strong></span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>⚡ <span>Priority live radar placement</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>🛡️ <span>Featured employer badge</span></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>📅 <span>Active unlimited for 30 days</span></div>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          setSelectedPlan('unlimited');
+                          setIsVerifying(true);
+                          window.open('https://razorpay.me/@vishwanaththippayanadurgavenk', '_blank', 'noopener,noreferrer');
+                        }}
+                        className="btn-primary" 
+                        style={{ marginTop: 'auto', width: '100%', padding: '0.85rem', borderRadius: '12px', fontWeight: '700', fontSize: '1rem', background: 'linear-gradient(135deg, var(--accent), #4c1d95)', boxShadow: '0 4px 15px rgba(139, 92, 246, 0.4)' }}
+                      >
+                        Subscribe Now
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </motion.div>
           </motion.div>
         )}
