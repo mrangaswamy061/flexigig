@@ -105,12 +105,15 @@ function App() {
     fetchBackendData();
   }, []);
 
-  const handleLogin = (role, isNewUser, name, email) => {
+  const handleLogin = (role, isNewUser, name, email, user = null) => {
     setUserRole(role);
     setIsLoggedIn(true);
     setNeedsProfile(isNewUser);
     if (name) setUserName(name);
     if (email) setUserEmail(email);
+    if (user) {
+      setUserProfile(user);
+    }
   };
 
   const handleLogout = () => {

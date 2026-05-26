@@ -32,7 +32,11 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
         if (res.ok) {
           const data = await res.json();
           if (data && data.length > 0) {
-            setMapCenter([parseFloat(data[0].lat), parseFloat(data[0].lon)]);
+            const lat = parseFloat(data[0].lat);
+            const lon = parseFloat(data[0].lon);
+            if (!isNaN(lat) && !isNaN(lon)) {
+              setMapCenter([lat, lon]);
+            }
           }
         }
       } catch (err) {
