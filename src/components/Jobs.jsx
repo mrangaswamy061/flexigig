@@ -24,6 +24,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   }, [globalJobs]);
 
   useEffect(() => {
+    // Try browser geolocation first
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -34,10 +35,27 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           }
         },
         (error) => {
-          console.warn("Browser geolocation failed, falling back to profile geocoding.", error);
+          console.warn("Browser geolocation failed, trying IP-based geolocation...", error);
+          fetchIPLocation();
         },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
       );
+    } else {
+      fetchIPLocation();
+    }
+
+    async function fetchIPLocation() {
+      try {
+        const res = await fetch('https://ipapi.co/json/');
+        if (res.ok) {
+          const ipData = await res.json();
+          if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
+            setMapCenter([parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
+          }
+        }
+      } catch (err) {
+        console.error("IP geolocating failed, defaulting to Delhi:", err);
+      }
     }
   }, []);
 
