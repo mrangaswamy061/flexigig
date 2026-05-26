@@ -63,7 +63,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
-        onLogin(role, false, data.user?.name || name, email);
+        onLogin(role, false, data.user?.name || name, email, data.user);
       })
       .catch(err => {
         console.warn('Login fetch failed:', err);
@@ -71,7 +71,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         if (isNetworkError) {
           console.log('Falling back to Offline Mock Login.');
           alert("⚠️ Server offline. Logged in successfully in Offline Mock Mode!");
-          onLogin(role, false, name, email);
+          onLogin(role, false, name, email, { name, email, role });
         } else {
           alert(err.message);
         }

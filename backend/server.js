@@ -157,27 +157,61 @@ app.get('/api/users', async (req, res) => {
 // Locate Client IP (Proxied on server-side to bypass ad-blockers)
 app.get('/api/locate-me', async (req, res) => {
   try {
+    // 1. Try Vercel native geolocation headers first
+    const vercelLat = req.headers['x-vercel-ip-latitude'];
+    const vercelLon = req.headers['x-vercel-ip-longitude'];
+    const vercelCity = req.headers['x-vercel-ip-city'];
+    const vercelCountry = req.headers['x-vercel-ip-country'];
+
+    if (vercelLat && vercelLon) {
+      console.log('📍 Geolocated using Vercel Geo Headers:', vercelCity, vercelLat, vercelLon);
+      return res.json({
+        lat: parseFloat(vercelLat),
+        lon: parseFloat(vercelLon),
+        city: vercelCity ? decodeURIComponent(vercelCity) : 'Unknown',
+        country: vercelCountry ? decodeURIComponent(vercelCountry) : 'Unknown'
+      });
+    }
+
+    // 2. Otherwise fall back to freeipapi.com
     const rawIp = req.headers['x-forwarded-for'] || req.headers['x-real-ip'] || req.socket.remoteAddress;
     const ip = rawIp ? rawIp.split(',')[0].trim() : '';
     
-    // Fallback URL if running locally
     const locateUrl = ip && ip !== '127.0.0.1' && ip !== '::1' && !ip.startsWith('192.168.') && !ip.startsWith('10.') && !ip.startsWith('172.16.')
-      ? `https://ipapi.co/${ip}/json/`
-      : 'https://ipapi.co/json/';
+      ? `https://freeipapi.com/api/json/${ip}`
+      : 'https://freeipapi.com/api/json/';
       
+    console.log('📍 Querying Geolocation API:', locateUrl);
     const geoRes = await fetch(locateUrl);
     if (geoRes.ok) {
       const geoData = await geoRes.json();
-      return res.json({
-        lat: geoData.latitude,
-        lon: geoData.longitude,
-        city: geoData.city,
-        country: geoData.country_name
-      });
+      if (geoData && !isNaN(geoData.latitude) && !isNaN(geoData.longitude)) {
+        return res.json({
+          lat: parseFloat(geoData.latitude),
+          lon: parseFloat(geoData.longitude),
+          city: geoData.cityName || 'Unknown',
+          country: geoData.countryName || 'Unknown'
+        });
+      }
     }
-    res.status(500).json({ error: 'Failed to geolocate IP' });
+    
+    // 3. Fallback to Delhi if everything fails
+    res.json({
+      lat: 28.6139,
+      lon: 77.2090,
+      city: 'New Delhi',
+      country: 'India',
+      fallback: true
+    });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error("Locate-me error:", err);
+    res.json({
+      lat: 28.6139,
+      lon: 77.2090,
+      city: 'New Delhi',
+      country: 'India',
+      error: err.message
+    });
   }
 });
 

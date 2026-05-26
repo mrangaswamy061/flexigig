@@ -47,6 +47,21 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
 
     async function fetchIPLocation() {
       try {
+        // Try direct client-side call first
+        const directRes = await fetch('https://freeipapi.com/api/json');
+        if (directRes.ok) {
+          const ipData = await directRes.json();
+          if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
+            setMapCenter([parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
+            return;
+          }
+        }
+      } catch (err) {
+        console.warn("Direct client IP geolocation failed, trying backend proxy...", err);
+      }
+
+      try {
+        // Try proxied backend call second
         const res = await fetch(`${API_BASE_URL}/api/locate-me`);
         if (res.ok) {
           const ipData = await res.json();
