@@ -24,6 +24,24 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   }, [globalJobs]);
 
   useEffect(() => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
+          if (!isNaN(lat) && !isNaN(lon)) {
+            setMapCenter([lat, lon]);
+          }
+        },
+        (error) => {
+          console.warn("Browser geolocation failed, falling back to profile geocoding.", error);
+        },
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    }
+  }, []);
+
+  useEffect(() => {
     if (!studentLocation || studentLocation === 'Campus Center') return;
 
     const geocodeStudentLocation = async () => {
