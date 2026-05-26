@@ -34,6 +34,9 @@ if (process.env.NODE_ENV === 'production') {
 
 console.log('Database connection string:', MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + MONGO_URI.split('@')[1] : MONGO_URI.substring(0, 30));
 
+// Disable command buffering globally so mongoose fails fast when connection is offline
+mongoose.set('bufferCommands', false);
+
 mongoose.connect(MONGO_URI, {
   serverSelectionTimeoutMS: 5000, // Give it 5 seconds to connect securely in the cloud
   tlsAllowInvalidCertificates: true
@@ -42,9 +45,6 @@ mongoose.connect(MONGO_URI, {
   .catch(err => console.error('❌ MongoDB connection error (Running in Mock Fallback Mode):', err));
 
 const isMongoConnected = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return true; // Force MongoDB mode in production Vercel environments
-  }
   return mongoose.connection.readyState === 1;
 };
 
