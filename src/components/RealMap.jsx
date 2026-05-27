@@ -3,13 +3,12 @@ import React, { useEffect, useRef, useState } from 'react';
 const RealMap = ({ jobs = [], center, selectedJob, appliedJob, userRole, employerJob, studentLocation }) => {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]); // Default to New Delhi fallback
   const markersRef = useRef([]);
   const routeRef = useRef(null);
 
   useEffect(() => {
     if (!window.L || !mapRef.current) return;
-    const effectiveCenter = center || [28.6139, 77.2090];
+    const effectiveCenter = center ?? null;
 
     if (!mapInstanceRef.current) {
       mapInstanceRef.current = window.L.map(mapRef.current, {
@@ -22,9 +21,9 @@ const RealMap = ({ jobs = [], center, selectedJob, appliedJob, userRole, employe
     }
 
     const map = mapInstanceRef.current;
-    map.setView(effectiveCenter, 13);
+    if (effectiveCenter) { map.setView(effectiveCenter, 13); }
     setTimeout(() => {
-      if (mapInstanceRef.current) {
+      if (mapInstanceRef.current && effectiveCenter) {
         mapInstanceRef.current.invalidateSize();
         mapInstanceRef.current.setView(effectiveCenter, 13);
       }

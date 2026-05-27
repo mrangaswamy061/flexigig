@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Bell } from 'lucide-react';
+import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail } from 'lucide-react';
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
 
@@ -28,6 +28,25 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
   const hasActiveSubscription = subscriptionState.subscriptionActiveUntil && new Date(subscriptionState.subscriptionActiveUntil) > new Date();
   const hasCredits = subscriptionState.credits > 0;
   const canPostGig = hasActiveSubscription || hasCredits;
+
+  const handleAccept = async (app) => {
+    try {
+      // Placeholder: send accept request to backend (adjust endpoint as needed)
+      const response = await fetch(`${API_BASE_URL}/api/applications/accept`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: app.id })
+      });
+      if (response.ok) {
+        console.log('Application accepted', app.id);
+        // Optionally update UI state if you have a setter for applications
+      } else {
+        console.warn('Failed to accept application', response.status);
+      }
+    } catch (err) {
+      console.error('Error accepting application', err);
+    }
+  };
 
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [selectedPlan, setSelectedPlan] = useState(null); // 'single' or 'unlimited'
@@ -59,6 +78,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
       const data = await res.json();
       if (data && data.length > 0) {
         latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        setMapCenter(latlng);
       }
     } catch (err) {
       console.error("Geocoding failed:", err);
@@ -155,44 +175,6 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-          <div style={{ position: 'relative' }}>
-            <button 
-              onClick={() => setShowNotifications(!showNotifications)}
-              style={{ 
-                background: 'rgba(255, 255, 255, 0.05)', 
-                border: '1px solid rgba(255, 255, 255, 0.1)',
-                padding: '0.6rem',
-                borderRadius: '50%',
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.3s ease',
-                cursor: 'pointer'
-              }} className="card-hover">
-              <Bell size={20} />
-              <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', width: '8px', height: '8px', background: 'var(--accent)', borderRadius: '50%', border: '2px solid var(--bg-dark)' }} />
-            </button>
-            
-            {showNotifications && (
-              <div style={{ 
-                position: 'absolute', top: '120%', right: '-10px', width: '300px', 
-                background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', 
-                borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 40px rgba(0,0,0,0.8)', zIndex: 100 
-              }}>
-                <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem', color: 'white' }}>Notifications</h4>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                    <strong style={{ color: 'white' }}>New Application!</strong><br/>A student from State University just applied to your gig.
-                  </div>
-                  <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                    <strong style={{ color: 'white' }}>Profile Approved</strong><br/>Your employer profile has been verified.
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.25rem', borderRadius: '999px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-dark)', backgroundImage: userProfile?.profilePic ? `url(${userProfile.profilePic})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }} />
             <div style={{ paddingRight: '0.75rem' }}>
@@ -270,7 +252,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                                 <MapPin size={16} /> Location Tracking Active
                               </div>
                               <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                 <button className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: 'none' }}>Accept</button>
+                                 <button className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: 'none' }} onClick={() => handleAccept(app)}>Accept</button>
                                  <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1 }}>Message</button>
                               </div>
                             </div>
