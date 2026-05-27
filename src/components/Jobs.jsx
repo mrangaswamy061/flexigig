@@ -14,8 +14,8 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   const [loading, setLoading] = useState(true);
   const [selectedMapJob, setSelectedMapJob] = useState(null);
   const [showMap, setShowMap] = useState(true);
-  const [mapCenter, setMapCenter] = useState([28.6139, 77.2090]); // New Delhi fallback
-  const [detectedLocationName, setDetectedLocationName] = useState('New Delhi (Default)');
+  const [mapCenter, setMapCenter] = useState(null); // No default center, will be set via geolocation
+  const [detectedLocationName, setDetectedLocationName] = useState('Detecting location...');
   const appliedJobObj = jobs.find(j => appliedJobs.includes(j.id));
 
   useEffect(() => {
@@ -25,7 +25,11 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
     }
   }, [globalJobs]);
 
-  useEffect(() => {
+  // Helper to fetch current location on demand
+  const fetchCurrentLocation = async () => {
+    // Reset any existing center to force fresh detection
+    setMapCenter(null);
+    // Try browser geolocation first
     // Try browser geolocation first
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -33,74 +37,122 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           const lat = position.coords.latitude;
           const lon = position.coords.longitude;
           if (!isNaN(lat) && !isNaN(lon)) {
-            setMapCenter([lat, lon]);
+            console.log('🛰️ GPS location obtained', lat, lon);
+            // Use functional update to avoid overwriting later more accurate source
+            setMapCenter(prev => prev ?? [lat, lon]);
             setDetectedLocationName('Browser GPS Location');
           }
         },
         (error) => {
-          console.warn("Browser geolocation failed, trying IP-based geolocation...", error);
+          console.warn('Browser geolocation failed, trying IP fallback...', error);
           fetchIPLocation();
         },
-        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
       );
     } else {
       fetchIPLocation();
     }
+  };
 
-    async function fetchIPLocation() {
-      try {
-        // Try direct client-side call first
-        const directRes = await fetch('https://freeipapi.com/api/json');
-        if (directRes.ok) {
-          const ipData = await directRes.json();
-          if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
-            setMapCenter([parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
-            setDetectedLocationName(`${ipData.cityName || 'IP Location'} (${ipData.regionName || ''})`);
-            return;
-          }
+  // Existing fallback function (used by both initial load and button)
+  const fetchIPLocation = async () => {
+    // 1. Try ipwho.is
+    try {
+      const res = await fetch('https://ipwho.is/');
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.success && !isNaN(data.latitude) && !isNaN(data.longitude)) {
+          console.log('🌐 IP location obtained (ipwho.is)', data.latitude, data.longitude);
+          setMapCenter(prev => prev ?? [parseFloat(data.latitude), parseFloat(data.longitude)]);
+          setDetectedLocationName(`${data.city || 'IP Location'} (${data.region || ''})`);
+          return;
         }
-      } catch (err) {
-        console.warn("Direct client IP geolocation failed, trying backend proxy...", err);
       }
-
-      try {
-        // Try proxied backend call second
-        const res = await fetch(`${API_BASE_URL}/api/locate-me`);
-        if (res.ok) {
-          const ipData = await res.json();
-          if (ipData && !isNaN(ipData.lat) && !isNaN(ipData.lon)) {
-            setMapCenter([parseFloat(ipData.lat), parseFloat(ipData.lon)]);
-            setDetectedLocationName(`${ipData.city || 'Server IP Location'} (${ipData.country || ''})`);
-          }
-        }
-      } catch (err) {
-        console.error("IP geolocating failed, defaulting to Delhi:", err);
-      }
+    } catch (err) {
+      console.warn('ipwho.is failed, trying next provider...', err);
     }
+
+    // 2. Try freeipapi
+    try {
+      const directRes = await fetch('https://freeipapi.com/api/json');
+      if (directRes.ok) {
+        const ipData = await directRes.json();
+        if (ipData && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
+          console.log('🌐 IP location obtained (freeipapi)', ipData.latitude, ipData.longitude);
+          setMapCenter(prev => prev ?? [parseFloat(ipData.latitude), parseFloat(ipData.longitude)]);
+          setDetectedLocationName(`${ipData.cityName || 'IP Location'} (${ipData.regionName || ''})`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('freeipapi failed, trying ipapi.co...', err);
+    }
+    
+    // 3. Try ipapi.co
+    try {
+      const res2 = await fetch('https://ipapi.co/json/');
+      if (res2.ok) {
+        const ipData2 = await res2.json();
+        if (ipData2 && !isNaN(ipData2.latitude) && !isNaN(ipData2.longitude)) {
+          console.log('🌐 IP location obtained (ipapi.co)', ipData2.latitude, ipData2.longitude);
+          setMapCenter(prev => prev ?? [parseFloat(ipData2.latitude), parseFloat(ipData2.longitude)]);
+          setDetectedLocationName(`${ipData2.city || 'IP Location'} (${ipData2.region || ''})`);
+          return;
+        }
+      }
+    } catch (err) {
+      console.warn('ipapi.co fetch failed, trying backend proxy...', err);
+    }
+    
+    // 4. Backend proxy fallback
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/locate-me`);
+      if (res.ok) {
+        const ipData = await res.json();
+        if (ipData && !isNaN(ipData.lat) && !isNaN(ipData.lon)) {
+          console.log('🌐 IP location obtained (backend)', ipData.lat, ipData.lon);
+          setMapCenter(prev => prev ?? [parseFloat(ipData.lat), parseFloat(ipData.lon)]);
+          setDetectedLocationName(`${ipData.city || 'Server IP Location'} (${ipData.country || ''})`);
+        }
+      }
+    } catch (err) {
+      console.error('IP geolocating failed, unable to determine location:', err);
+    }
+  };
+
+  // Initial location detection (runs once on mount)
+  useEffect(() => {
+    fetchCurrentLocation();
   }, []);
 
+  // Geocode profile address after a short delay, overriding any existing center only if not already set
   useEffect(() => {
     if (!studentLocation || studentLocation === 'Campus Center') return;
-
-    const geocodeStudentLocation = async () => {
-      try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(studentLocation)}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
-            if (!isNaN(lat) && !isNaN(lon)) {
-              setMapCenter([lat, lon]);
-              setDetectedLocationName(`${studentLocation} (Profile Address)`);
+    // Only attempt to geocode profile location after giving other methods a chance
+    const timer = setTimeout(() => {
+      const geocodeStudentLocation = async () => {
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(studentLocation)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+              const lat = parseFloat(data[0].lat);
+              const lon = parseFloat(data[0].lon);
+              if (!isNaN(lat) && !isNaN(lon)) {
+                console.log('📍 Profile address geocoded (delayed)', lat, lon);
+                // Only set if mapCenter hasn't been set by a more accurate method
+                setMapCenter(prev => prev ?? [lat, lon]);
+                setDetectedLocationName(`${studentLocation} (Profile Address)`);
+              }
             }
           }
+        } catch (err) {
+          console.error('Geocoding student location failed:', err);
         }
-      } catch (err) {
-        console.error("Geocoding student location failed:", err);
-      }
-    };
-    geocodeStudentLocation();
+      };
+      geocodeStudentLocation();
+    }, 5000); // reduced delay to allow quicker geocoding after GPS/IP resolution
+    return () => clearTimeout(timer);
   }, [studentLocation]);
 
 
@@ -173,8 +225,31 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
             </button>
           </div>
 
-          {/* Map Visibility Toggle */}
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
+          {/* Debug panel to show location state */}
+          <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '8px', fontFamily: 'monospace' }}>
+            <strong>Detected:</strong> {detectedLocationName}<br />
+            <strong>Center:</strong> {mapCenter ? `${mapCenter[0].toFixed(4)}, ${mapCenter[1].toFixed(4)}` : 'none'}
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
+            <button
+              onClick={() => fetchCurrentLocation()}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem',
+                padding: '0.5rem 1rem',
+                borderRadius: '8px',
+                background: 'rgba(255,255,255,0.05)',
+                color: 'var(--text-muted)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.1)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; }}
+            >
+              <Map size={16} /> Refresh Location
+            </button>
             <button 
               onClick={() => setShowMap(true)} 
               style={{ 
@@ -201,7 +276,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
             </button>
           </div>
         </div>
-      </div>
+      
 
       <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 200px', display: 'flex', alignItems: 'center', background: 'rgba(255, 255, 255, 0.03)', borderRadius: '12px', padding: '0.75rem 1.25rem', border: '1px solid rgba(255, 255, 255, 0.1)' }} className="search-container">
@@ -387,14 +462,16 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
                     <X size={16} />
                   </button>
 
-                  <RealMap 
-                    jobs={filteredJobs} 
-                    center={mapCenter} 
-                    selectedJob={selectedMapJob} 
-                    appliedJob={appliedJobObj}
-                    userRole="student"
-                    studentLocation={studentLocation}
-                  />
+                  {showMap && mapCenter && (
+                    <RealMap 
+                      jobs={filteredJobs} 
+                      center={mapCenter} 
+                      selectedJob={selectedMapJob} 
+                      appliedJob={appliedJobObj}
+                      userRole="student"
+                      studentLocation={studentLocation}
+                    />
+                  )}
 
                 </div>
               </motion.div>
@@ -404,7 +481,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
         </div>
       )}
 
-      <style>{`
+      
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .lucide-spin { animation: spin 1s linear infinite; }
         .search-container:focus-within {

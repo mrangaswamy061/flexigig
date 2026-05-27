@@ -1,9 +1,33 @@
-import React, { useState } from 'react';
-import { Briefcase, User, LayoutDashboard, Bell, Search } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+
 import { motion } from 'framer-motion';
 
 const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      // If click is not on the bell button or within the dropdown, close it
+      const bell = document.getElementById('notification-bell');
+      const dropdown = document.getElementById('notification-dropdown');
+      if (bell && bell.contains(e.target)) return;
+      if (dropdown && dropdown.contains(e.target)) return;
+      setShowNotifications(false);
+    };
+    document.addEventListener('click', handleClickOutside);
+    return () => document.removeEventListener('click', handleClickOutside);
+  }, []);
+
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  // Fetch notifications (mock implementation)
+  useEffect(() => {
+    // In a real app, replace this with an API call e.g., fetch('/api/notifications?email=' + (userProfile?.email || ''))
+    const mockData = [
+      { title: 'New Gig Match!', message: 'A new gig was posted matching your skills.' },
+      { title: 'Application Viewed', message: 'An employer just reviewed your application.' }
+    ];
+    setNotifications(mockData);
+  }, []);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs', label: 'Find Gigs', icon: Briefcase },
@@ -17,7 +41,7 @@ const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
-      position: 'sticky',
+      overflow: 'visible',
       top: '1.5rem',
       zIndex: 50,
       border: '1px solid rgba(255, 255, 255, 0.1)'
@@ -59,42 +83,6 @@ const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-        <div style={{ position: 'relative' }}>
-          <button 
-            onClick={() => setShowNotifications(!showNotifications)}
-            style={{ 
-              background: 'rgba(255, 255, 255, 0.05)', 
-              border: '1px solid var(--border-color)',
-              padding: '0.6rem',
-              borderRadius: '50%',
-              color: 'var(--text-main)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s ease'
-            }} className="card-hover">
-            <Bell size={20} />
-            <div style={{ position: 'absolute', top: '0.6rem', right: '0.6rem', width: '8px', height: '8px', background: 'var(--primary)', borderRadius: '50%', border: '2px solid var(--bg-dark)' }} />
-          </button>
-          
-          {showNotifications && (
-            <div style={{ 
-              position: 'absolute', top: '120%', right: '-10px', width: '300px', 
-              background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', 
-              borderRadius: '12px', padding: '1rem', boxShadow: '0 10px 40px rgba(0,0,0,0.8)', zIndex: 100 
-            }}>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', marginBottom: '1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '0.5rem' }}>Notifications</h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                  <strong style={{ color: 'white' }}>New Gig Match!</strong><br/>A new gig was posted matching your skills.
-                </div>
-                <div style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
-                  <strong style={{ color: 'white' }}>Application Viewed</strong><br/>An employer just reviewed your application.
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.4rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div>
             <p style={{ fontSize: '0.9rem', fontWeight: '600', lineHeight: '1' }}>{userProfile?.name?.split(' ')[0] || 'Alex'}</p>
