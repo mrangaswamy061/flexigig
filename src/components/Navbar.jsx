@@ -1,33 +1,8 @@
 import React, { useState, useEffect } from 'react';
-
 import { motion } from 'framer-motion';
+import { LayoutDashboard, Briefcase, User } from 'lucide-react';
 
 const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      // If click is not on the bell button or within the dropdown, close it
-      const bell = document.getElementById('notification-bell');
-      const dropdown = document.getElementById('notification-dropdown');
-      if (bell && bell.contains(e.target)) return;
-      if (dropdown && dropdown.contains(e.target)) return;
-      setShowNotifications(false);
-    };
-    document.addEventListener('click', handleClickOutside);
-    return () => document.removeEventListener('click', handleClickOutside);
-  }, []);
-
-  const [showNotifications, setShowNotifications] = useState(false);
-  const [notifications, setNotifications] = useState([]);
-  // Fetch notifications (mock implementation)
-  useEffect(() => {
-    // In a real app, replace this with an API call e.g., fetch('/api/notifications?email=' + (userProfile?.email || ''))
-    const mockData = [
-      { title: 'New Gig Match!', message: 'A new gig was posted matching your skills.' },
-      { title: 'Application Viewed', message: 'An employer just reviewed your application.' }
-    ];
-    setNotifications(mockData);
-  }, []);
-
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'jobs', label: 'Find Gigs', icon: Briefcase },

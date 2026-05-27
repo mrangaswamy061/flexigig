@@ -199,31 +199,6 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', fontWeight: '300' }}>Discover flexible campus and local business opportunities near you.</p>
         </div>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-          {/* Gig Type Filters */}
-          <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
-            <button 
-              onClick={() => setEmployerFilter('All')} 
-              style={{ 
-                padding: '0.5rem 1rem', borderRadius: '8px', 
-                background: employerFilter === 'All' ? 'rgba(255,255,255,0.15)' : 'transparent', 
-                color: employerFilter === 'All' ? 'white' : 'var(--text-muted)', 
-                fontWeight: '600', border: 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem'
-              }}
-            >
-              All Gigs
-            </button>
-            <button 
-              onClick={() => setEmployerFilter('Local Business')} 
-              style={{ 
-                padding: '0.5rem 1rem', borderRadius: '8px', 
-                background: employerFilter === 'Local Business' ? 'rgba(16, 185, 129, 0.2)' : 'transparent', 
-                color: employerFilter === 'Local Business' ? '#10b981' : 'var(--text-muted)', 
-                fontWeight: '600', border: 'none', cursor: 'pointer', transition: 'all 0.2s', fontSize: '0.9rem'
-              }}
-            >
-              Local Businesses Only
-            </button>
-          </div>
 
           {/* Debug panel to show location state */}
           <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '8px', fontFamily: 'monospace' }}>
@@ -477,42 +452,10 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
               </motion.div>
             )}
           </AnimatePresence>
-          
         </div>
-      )}
+      </motion.div>
+    );
+  };
 
-      
-        @keyframes spin { 100% { transform: rotate(360deg); } }
-        .lucide-spin { animation: spin 1s linear infinite; }
-        .search-container:focus-within {
-          border-color: rgba(249, 115, 22, 0.5) !important;
-          box-shadow: 0 0 15px rgba(249, 115, 22, 0.1) !important;
-        }
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.02);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: rgba(255, 255, 255, 0.1);
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: rgba(255, 255, 255, 0.2);
-        }
-        .mock-map {
-          background: 
-            radial-gradient(circle at center, rgba(16, 185, 129, 0.05) 0%, transparent 60%),
-            linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
-          background-size: 100% 100%, 30px 30px, 30px 30px;
-          background-color: #030303;
-        }
-      `}</style>
-    </motion.div>
-  );
-};
 
 export default Jobs;
