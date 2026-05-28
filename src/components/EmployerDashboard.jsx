@@ -118,16 +118,35 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     const location = formData.get('location');
 
     let latlng = null;
-    try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
-      const data = await res.json();
-      if (data && data.length > 0) {
-        latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-      }
-    } catch (err) {
-      console.error("Geocoding failed:", err);
+
+    // 1. Try Browser GPS first (Most accurate)
+    const gps = await new Promise((resolve) => {
+      if (!navigator.geolocation) return resolve(null);
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+      );
+    });
+
+    if (gps) {
+      latlng = gps;
     }
 
+    // 2. Try Nominatim Geocoding
+    if (!latlng) {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
+        const data = await res.json();
+        if (data && data.length > 0) {
+          latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        }
+      } catch (err) {
+        console.error("Geocoding failed:", err);
+      }
+    }
+
+    // 3. Fallback to IP Location
     if (!latlng) {
       try {
         const ipRes = await fetch('https://ipwho.is/');
@@ -135,7 +154,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
         if (ipData && ipData.success && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
           latlng = [parseFloat(ipData.latitude), parseFloat(ipData.longitude)];
         } else {
-          latlng = [28.6139, 77.2090]; // Delhi fallback
+          latlng = [28.6139, 77.2090]; // Delhi absolute fallback
         }
       } catch (e) {
         latlng = [28.6139, 77.2090];
