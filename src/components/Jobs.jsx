@@ -132,7 +132,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
     const timer = setTimeout(() => {
       const geocodeStudentLocation = async () => {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(studentLocation)}`);
+          const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(studentLocation));
           if (res.ok) {
             const data = await res.json();
             if (data && data.length > 0) {
@@ -167,23 +167,38 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
   });
 
   const handleDirections = (destination) => {
-    window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(destination)}`, '_blank', 'noopener,noreferrer');
+    window.open('https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(destination), '_blank', 'noopener,noreferrer');
   };
 
-  const handleOneClickApply = (id) => {
+  const handleOneClickApply = async (id) => {
     if (!appliedJobs.includes(id)) {
+      // Optimistically update UI
       setAppliedJobs([...appliedJobs, id]);
+      const newApp = {
+        jobId: id,
+        studentEmail: userProfile?.email,
+        studentName: userProfile?.name || 'Student',
+        studentCollege: userProfile?.college || 'University',
+        studentMajor: userProfile?.major || 'General',
+        studentRating: 4.5,
+        appliedAt: new Date().toLocaleTimeString(),
+        studentLoc: [28.6139 + (Math.random() - 0.5) * 0.02, 77.2090 + (Math.random() - 0.5) * 0.02]
+      };
       if (setApplications) {
-        setApplications(prev => [...prev, {
-          jobId: id,
-          studentEmail: userProfile?.email,
-          studentName: userProfile?.name || 'Student',
-          studentCollege: userProfile?.college || 'University',
-          studentMajor: userProfile?.major || 'General',
-          studentRating: 4.5,
-          appliedAt: new Date().toLocaleTimeString(),
-          studentLoc: [28.6139 + (Math.random()-0.5)*0.02, 77.2090 + (Math.random()-0.5)*0.02]
-        }]);
+        setApplications(prev => [...prev, newApp]);
+      }
+      // Persist to backend if MongoDB connection is healthy
+      try {
+        const resp = await fetch(`${API_BASE_URL}/api/applications`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newApp)
+        });
+        if (!resp.ok) {
+          console.warn('Failed to save application to backend, will rely on local state');
+        }
+      } catch (err) {
+        console.error('Error posting application:', err);
       }
     }
   };
@@ -203,7 +218,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           {/* Debug panel to show location state */}
           <div style={{ marginBottom: '1rem', padding: '0.5rem', background: 'rgba(0,0,0,0.5)', color: 'white', borderRadius: '8px', fontFamily: 'monospace' }}>
             <strong>Detected:</strong> {detectedLocationName}<br />
-            <strong>Center:</strong> {mapCenter ? `${mapCenter[0].toFixed(4)}, ${mapCenter[1].toFixed(4)}` : 'none'}
+            <strong>Center:</strong> {mapCenter ? mapCenter[0].toFixed(4) + ', ' + mapCenter[1].toFixed(4) : 'none'}
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', padding: '0.35rem', borderRadius: '12px' }}>
             <button
@@ -331,7 +346,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
                         background: job.employerType === 'Local Business' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(249, 115, 22, 0.15)', 
                         color: job.employerType === 'Local Business' ? '#10b981' : '#f97316', 
                         padding: '0.25rem 0.75rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700',
-                        border: `1px solid ${job.employerType === 'Local Business' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(249, 115, 22, 0.3)'}`
+                        border: '1px solid ' + (job.employerType === 'Local Business' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(249, 115, 22, 0.3)')
                       }}>
                         {job.employerType}
                       </div>
@@ -437,25 +452,23 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
                     <X size={16} />
                   </button>
 
-                  {showMap && mapCenter && (
-                    <RealMap 
-                      jobs={filteredJobs} 
-                      center={mapCenter} 
-                      selectedJob={selectedMapJob} 
-                      appliedJob={appliedJobObj}
-                      userRole="student"
-                      studentLocation={studentLocation}
-                    />
-                  )}
-
+                  {showMap && (
+  <RealMap
+    jobs={filteredJobs}
+    center={mapCenter}
+    selectedJob={selectedMapJob}
+    appliedJob={appliedJobObj}
+    userRole="student"
+    studentLocation={studentLocation}
+  />
+)}
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-        </div>
-      </motion.div>
-    );
-  };
-
+      </div>
+  </motion.div>
+  );
+};
 
 export default Jobs;

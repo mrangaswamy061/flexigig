@@ -1,17 +1,23 @@
+// Core imports
+// Core imports
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 
-// Import Models
+// Load environment variables early
+dotenv.config();
+
+// Import Models (will be loaded after connection is ready)
 import User from './models/User.js';
 import Job from './models/Job.js';
 import Application from './models/Application.js';
+import LoginLog from './models/LoginLog.js'; // new model for login tracking
 
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5002;
+const PORT = process.env.PORT || 0;
 
 // Middleware
 app.use(cors());
@@ -23,10 +29,16 @@ app.use((req, res, next) => {
   next();
 });
 
+// Start Server (in any environment)
+const server = app.listen(PORT, () => {
+  const actualPort = server.address().port;
+  console.log(`✅ Backend server is running on http://localhost:${actualPort}`);
+});
+
 // --- MONGODB CONNECTION ---
+// --- MONGODB CONNECTION (with caching for serverless) ---
 let MONGO_URI = process.env.MONGO_URI || 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
 
-// If running in production Vercel cloud, ALWAYS force use the verified MongoDB Atlas cloud database!
 if (process.env.NODE_ENV === 'production') {
   console.log('🚀 Running in production Vercel cloud! Forcing connection to verified MongoDB Atlas database...');
   MONGO_URI = 'mongodb+srv://Swamy:swamy1234@cluster0.efwvvz1.mongodb.net/flexigig';
@@ -34,20 +46,36 @@ if (process.env.NODE_ENV === 'production') {
 
 console.log('Database connection string:', MONGO_URI.startsWith('mongodb+srv://') ? 'mongodb+srv://[REDACTED]@' + MONGO_URI.split('@')[1] : MONGO_URI.substring(0, 30));
 
-// Disable command buffering globally so mongoose fails fast when connection is offline
+// Cache the connection to avoid reconnects on every lambda invocation
+let cached = global.mongoose;
+if (!cached) {
+  cached = global.mongoose = { conn: null, promise: null };
+}
+
 mongoose.set('bufferCommands', false);
 
-mongoose.connect(MONGO_URI, {
-  serverSelectionTimeoutMS: 5000, // Give it 5 seconds to connect securely in the cloud
-  tlsAllowInvalidCertificates: true,
-  family: 4 // Force IPv4 to prevent Node 18+ hostname resolution hangs in serverless environments
-})
-  .then(() => console.log('✅ Connected to MongoDB!'))
-  .catch(err => console.error('❌ MongoDB connection error (Running in Mock Fallback Mode):', err));
+if (!cached.conn) {
+  cached.promise = mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 5000,
+    tlsAllowInvalidCertificates: true,
+    family: 4
+  }).then(m => {
+    console.log('✅ Connected to MongoDB (cached)');
+    return m;
+  }).catch(err => {
+    console.error('❌ MongoDB connection error (Running in Mock Fallback Mode):', err);
+    throw err;
+  });
+  cached.conn = cached.promise;
+}
 
+// Helper to know if we have a healthy connection (used throughout the routes)
 const isMongoConnected = () => {
-  return mongoose.connection.readyState === 1;
+  // cached.conn will be a resolved mongoose connection if successful
+  return !!(cached.conn && mongoose.connection && mongoose.connection.readyState === 1);
 };
+
+
 
 // --- MOCK DATABASE FALLBACK DATA ---
 const mockUsers = [
@@ -74,6 +102,9 @@ app.post('/api/auth/login', async (req, res) => {
       return res.status(400).json({ error: 'Please enter a valid email address.' });
     }
 
+    // Capture client IP for logging (fallback to request headers)
+    const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection?.remoteAddress || '';
+
     if (!isMongoConnected()) {
       console.log('⚠️ MongoDB not connected. Falling back to Mock Login.');
       let user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
@@ -84,11 +115,17 @@ app.post('/api/auth/login', async (req, res) => {
         user.loginCount = (user.loginCount || 0) + 1;
         user.lastLogin = new Date();
       }
+      // Record mock login attempt
+      if (isMongoConnected()) {
+        await LoginLog.create({ email, ip: clientIp, success: true });
+      }
       return res.json({ message: 'Login successful (Mock Mode)', user });
     }
 
     const user = await User.findOne({ email });
     if (!user) {
+      // Log failed login attempt
+      await LoginLog.create({ email, ip: clientIp, success: false });
       return res.status(401).json({ error: 'Account not found. Please register first.' });
     }
     
@@ -97,8 +134,16 @@ app.post('/api/auth/login', async (req, res) => {
     user.lastLogin = new Date();
     await user.save();
 
+    // Record successful login
+    await LoginLog.create({ userId: user._id, email, ip: clientIp, success: true });
+
     res.json({ message: 'Login successful', user });
   } catch (err) {
+    // Attempt to log error login attempt if possible
+    try {
+      const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection?.remoteAddress || '';
+      await LoginLog.create({ email: req.body?.email || 'unknown', ip: clientIp, success: false });
+    } catch (_) {}
     res.status(500).json({ error: err.message });
   }
 });
@@ -405,11 +450,6 @@ app.get('/api/stats', async (req, res) => {
   }
 });
 
-// Start Server
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log(`✅ Backend server is running on http://localhost:${PORT}`);
-  });
-}
+
 
 export default app;
