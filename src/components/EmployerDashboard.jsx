@@ -117,15 +117,29 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     const title = formData.get('title');
     const location = formData.get('location');
 
-    let latlng = [28.6139, 77.2090];
+    let latlng = null;
     try {
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}`);
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
       const data = await res.json();
       if (data && data.length > 0) {
         latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
       }
     } catch (err) {
       console.error("Geocoding failed:", err);
+    }
+
+    if (!latlng) {
+      try {
+        const ipRes = await fetch('https://ipwho.is/');
+        const ipData = await ipRes.json();
+        if (ipData && ipData.success && !isNaN(ipData.latitude) && !isNaN(ipData.longitude)) {
+          latlng = [parseFloat(ipData.latitude), parseFloat(ipData.longitude)];
+        } else {
+          latlng = [28.6139, 77.2090]; // Delhi fallback
+        }
+      } catch (e) {
+        latlng = [28.6139, 77.2090];
+      }
     }
 
     const newJob = {
