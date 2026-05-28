@@ -2,33 +2,55 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TrendingUp, Clock, CheckCircle, ChevronRight, IndianRupee, Loader, Star, ArrowUpRight, MapPin } from 'lucide-react';
 
-const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [] }) => {
+const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [], applications = [], setApplications }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const handleMarkAsDone = (e, jobId) => {
+    e.stopPropagation();
+    if (setApplications) {
+      setApplications(prev => prev.map(a => 
+        (a.jobId === jobId && a.studentEmail === userProfile?.email) 
+          ? { ...a, status: 'Completed' } 
+          : a
+      ));
+    }
+  };
+
   useEffect(() => {
-    // Compute dynamic data from student activity
+    const myApps = applications.filter(a => a.studentEmail === userProfile?.email);
     const appliedGigDetails = globalJobs.filter(j => appliedJobs.includes(j.id));
-    const totalEarned = appliedGigDetails.reduce((sum, job) => {
+    
+    // Only calculate for Completed jobs
+    const completedApps = myApps.filter(a => a.status === 'Completed');
+    const completedJobIds = completedApps.map(a => a.jobId);
+    const completedJobs = globalJobs.filter(j => completedJobIds.includes(j.id));
+
+    const totalEarned = completedJobs.reduce((sum, job) => {
       const payMatch = job.pay?.match(/(\d+)/);
-      return sum + (payMatch ? parseInt(payMatch[1]) * 10 : 0);
+      return sum + (payMatch ? parseInt(payMatch[1]) : 0);
     }, 0);
-    const totalHours = appliedGigDetails.reduce((sum, job) => {
+
+    const totalHours = completedJobs.reduce((sum, job) => {
       const hourMatch = job.duration?.match(/(\d+)/);
-      return sum + (hourMatch ? parseInt(hourMatch[1]) : 4);
+      return sum + (hourMatch ? parseInt(hourMatch[1]) : 0);
     }, 0);
 
     const mockData = {
-      activeGigs: appliedJobs.length,
-      completedGigs: Math.max(0, appliedJobs.length - 1),
-      earnedThisMonth: totalEarned || 0,
-      hoursTracked: totalHours || 0,
+      activeGigs: Math.max(0, appliedJobs.length - completedJobs.length),
+      completedGigs: completedJobs.length,
+      earnedThisMonth: totalEarned,
+      hoursTracked: totalHours,
       studentName: userProfile?.name?.split(' ')[0] || 'Alex',
       studentLocation: userProfile?.location || 'North Campus Dorms, Block B',
-      recentGigs: appliedGigDetails.length > 0 ? appliedGigDetails.slice(0, 3).map(g => ({
-        id: g.id, title: g.title, company: g.dept, status: 'In Progress', 
-        deadline: 'This Week', type: g.type || 'In Person', location: g.location
-      })) : [
+      recentGigs: appliedGigDetails.length > 0 ? appliedGigDetails.map(g => {
+        const app = myApps.find(a => a.jobId === g.id);
+        return {
+          id: g.id, title: g.title, company: g.dept, 
+          status: app?.status || 'Pending', 
+          deadline: 'This Week', type: g.type || 'In Person', location: g.location
+        };
+      }).slice(0, 5) : [
         { id: 1, title: 'No gigs yet — apply now!', company: 'Go to Find Gigs', status: 'Pending', deadline: 'Today', type: 'Start', location: 'Explore' }
       ]
     };
@@ -37,7 +59,7 @@ const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [] 
       setData(mockData);
       setLoading(false);
     }, 400);
-  }, [appliedJobs, globalJobs, userProfile]);
+  }, [appliedJobs, globalJobs, userProfile, applications]);
 
   if (loading || !data) {
     return (
@@ -149,20 +171,27 @@ const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [] 
                     <p style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', color: 'var(--accent)', fontSize: '0.85rem' }}><MapPin size={14} /> {gig.location}</p>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
+                <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                   <span style={{ 
                     display: 'inline-block',
                     padding: '0.35rem 1rem',
-                    background: gig.status === 'In Progress' ? 'rgba(249, 115, 22, 0.15)' : 'rgba(16, 185, 129, 0.15)',
-                    color: gig.status === 'In Progress' ? '#f97316' : '#10b981',
-                    border: `1px solid ${gig.status === 'In Progress' ? 'rgba(249, 115, 22, 0.3)' : 'rgba(16, 185, 129, 0.3)'}`,
+                    background: gig.status === 'Completed' ? 'rgba(59, 130, 246, 0.15)' : gig.status === 'Accepted' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(249, 115, 22, 0.15)',
+                    color: gig.status === 'Completed' ? '#3b82f6' : gig.status === 'Accepted' ? '#10b981' : '#f97316',
+                    border: `1px solid ${gig.status === 'Completed' ? 'rgba(59, 130, 246, 0.3)' : gig.status === 'Accepted' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(249, 115, 22, 0.3)'}`,
                     borderRadius: '999px',
                     fontSize: '0.85rem',
-                    fontWeight: '600',
-                    marginBottom: '0.5rem'
+                    fontWeight: '600'
                   }}>
                     {gig.status}
                   </span>
+                  {gig.status === 'Accepted' && (
+                    <button 
+                      onClick={(e) => handleMarkAsDone(e, gig.id)}
+                      style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', background: 'var(--primary)', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer' }}
+                    >
+                      Mark as Done
+                    </button>
+                  )}
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
                     <Clock size={12} /> Due: {gig.deadline}
                   </p>

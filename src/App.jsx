@@ -227,7 +227,7 @@ function App() {
     const studentJobs = globalJobs.filter(j => j.status !== 'Inactive');
     switch (currentView) {
       case 'dashboard':
-        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;
+        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} applications={applications} setApplications={handleSetApplications} />;
       case 'jobs':
         return <Jobs key="jobs" userProfile={{ name: userName, email: userEmail, ...userProfile }} appliedJobs={appliedJobs} setAppliedJobs={handleSetAppliedJobs} globalJobs={studentJobs} applications={applications} setApplications={handleSetApplications} />;
       case 'profile':
@@ -244,7 +244,7 @@ function App() {
           }
         }} />;
       default:
-        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} />;
+        return <Dashboard key="dashboard" onNavigate={setCurrentView} appliedJobs={appliedJobs} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={studentJobs} applications={applications} setApplications={handleSetApplications} />;
     }
   };
 
