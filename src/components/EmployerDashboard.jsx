@@ -36,6 +36,27 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
   const hasCredits = subscriptionState.credits > 0;
   const canPostGig = true;
 
+  const handlePayment = (plan) => {
+    // Open payment link in a new tab
+    window.open("https://razorpay.me/@vishwanaththippayanadurgavenk", "_blank");
+    
+    // Simulate updating the account after successful payment
+    if (plan === 'single') {
+      saveSubscriptionState({
+        ...subscriptionState,
+        credits: subscriptionState.credits + 1
+      });
+      alert("Payment successful! 1 Credit added. You can now post a gig.");
+    } else {
+      saveSubscriptionState({
+        ...subscriptionState,
+        subscriptionActiveUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+      });
+      alert("Payment successful! Unlimited plan activated for 1 month.");
+    }
+    setShowPaymentModal(false);
+  };
+
   const handleAccept = async (app) => {
     try {
       const appId = app.id || app._id;
@@ -622,7 +643,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent)' }}>₹29</span>
-                    <a href="https://razorpay.me/@vishwanaththippayanadurgavenk" target="_blank" rel="noreferrer" className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textDecoration: 'none' }}>Pay Now</a>
+                    <button onClick={() => handlePayment('single')} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', border: 'none', cursor: 'pointer' }}>Pay Now</button>
                   </div>
                 </div>
 
@@ -634,7 +655,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
                     <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent)' }}>₹199</span>
-                    <a href="https://razorpay.me/@vishwanaththippayanadurgavenk" target="_blank" rel="noreferrer" className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textDecoration: 'none', background: 'linear-gradient(135deg, var(--accent), #4c1d95)' }}>Pay Now</a>
+                    <button onClick={() => handlePayment('unlimited')} className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', border: 'none', cursor: 'pointer', background: 'linear-gradient(135deg, var(--accent), #4c1d95)' }}>Pay Now</button>
                   </div>
                 </div>
               </div>
