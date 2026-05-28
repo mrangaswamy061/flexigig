@@ -27,9 +27,64 @@ const Badge = ({ label, color }) => (
   <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', background: `${color}20`, color }}>{label}</span>
 );
 
-const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [], setStudents, employers = [], setEmployers }) => {
+const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [], setStudents, employers = [], setEmployers, applications = [], setApplications }) => {
   const [tab, setTab] = useState('Overview');
   const [search, setSearch] = useState('');
+
+  // Dynamically generate recent activity from actual data
+  const recentActivities = [];
+
+  // Add applications
+  applications.slice(-3).forEach(app => {
+    const job = globalJobs.find(j => j.id === app.jobId);
+    recentActivities.push({
+      icon: FileText,
+      color: '#10b981',
+      title: `${app.studentName || 'Student'} applied`,
+      sub: `${job ? job.title : 'a gig'} @ ${job ? job.dept : 'Business'}`,
+      time: app.appliedAt || 'Just now',
+      timestamp: app.createdAt ? new Date(app.createdAt).getTime() : Date.now() - 600000
+    });
+  });
+
+  // Add posted jobs
+  globalJobs.slice(-3).forEach(job => {
+    recentActivities.push({
+      icon: Building2,
+      color: '#8b5cf6',
+      title: `${job.dept || 'Employer'} posted a new gig`,
+      sub: `${job.title} • ${job.pay}`,
+      time: 'New gig',
+      timestamp: job.createdAt ? new Date(job.createdAt).getTime() : Date.now() - 1200000
+    });
+  });
+
+  // Add students who have logged in or are active
+  students.slice(-2).forEach(s => {
+    recentActivities.push({
+      icon: GraduationCap,
+      color: '#3b82f6',
+      title: `${s.name} joined as Student`,
+      sub: `${s.college} • ${s.major}`,
+      time: 'Active',
+      timestamp: Date.now() - 1800000
+    });
+  });
+
+  // Sort them if timestamps are available
+  recentActivities.sort((a, b) => b.timestamp - a.timestamp);
+
+  // Fallback if empty
+  if (recentActivities.length === 0) {
+    recentActivities.push({
+      icon: CheckCircle,
+      color: '#10b981',
+      title: 'Platform fully operational',
+      sub: 'All systems green, no recent actions',
+      time: 'Now',
+      timestamp: Date.now()
+    });
+  }
 
   const handleDeleteJob = async (id) => {
     try {
@@ -88,10 +143,10 @@ const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [],
 
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-          <StatCard label="Total Students" value="1,247" icon={GraduationCap} color="#3b82f6" trend="+12% this month" />
-          <StatCard label="Employers" value="156" icon={Building2} color="#8b5cf6" trend="+5% this month" />
-          <StatCard label="Active Jobs" value="342" icon={CheckCircle} color="#10b981" trend="+18% this week" />
-          <StatCard label="Applications" value="2,891" icon={FileText} color="#f97316" trend="+24% this week" />
+          <StatCard label="Total Students" value={students.length} icon={GraduationCap} color="#3b82f6" trend="+12% this month" />
+          <StatCard label="Employers" value={employers.length} icon={Building2} color="#8b5cf6" trend="+5% this month" />
+          <StatCard label="Active Gigs" value={globalJobs.length} icon={CheckCircle} color="#10b981" trend="+18% this week" />
+          <StatCard label="Total Applications" value={applications.length} icon={FileText} color="#f97316" trend="+24% this week" />
         </div>
 
         {/* Tabs */}
@@ -117,13 +172,7 @@ const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [],
               </div>
               <div className="glass-panel" style={{ padding: '2rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.25rem' }}>Recent Activity</h3>
-                {[
-                  { icon: GraduationCap, color: '#3b82f6', title: 'Sneha Patel completed a gig', sub: 'Graphic Designer @ Marketing Agency', time: '5 min ago' },
-                  { icon: Building2, color: '#8b5cf6', title: 'City Gym posted a new gig', sub: 'Fitness Instructor • ₹600/hr', time: '30 min ago' },
-                  { icon: FileText, color: '#10b981', title: 'Alex Johnson applied', sub: 'Event Setup Assistant', time: '1 hr ago' },
-                  { icon: ShieldAlert, color: '#ef4444', title: "Joe's Pizzeria flagged", sub: 'Minimum wage concern raised', time: '3 hrs ago' },
-                  { icon: Star, color: '#f59e0b', title: 'New review submitted', sub: 'Priya rated 4.5 by Coffee Shop', time: '5 hrs ago' },
-                ].map((a, i) => {
+                {recentActivities.map((a, i) => {
                   const Icon = a.icon;
                   return (
                     <div key={i} style={{ display: 'flex', gap: '0.75rem', padding: '0.85rem', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', marginBottom: '0.75rem', border: '1px solid rgba(255,255,255,0.04)' }}>

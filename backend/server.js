@@ -29,6 +29,21 @@ app.use((req, res, next) => {
   next();
 });
 
+// Middleware to guarantee live MongoDB connection before any endpoint is hit (critical for Vercel serverless functions)
+app.use(async (req, res, next) => {
+  try {
+    if (mongoose.connection.readyState !== 1) {
+      console.log('⏳ MongoDB connection not ready. Awaiting connection promise...');
+      if (cached.promise) {
+        await cached.promise;
+      }
+    }
+  } catch (err) {
+    console.error('⚠️ Awaiting database connection failed:', err);
+  }
+  next();
+});
+
 // Start Server (in any environment)
 const server = app.listen(PORT, () => {
   const actualPort = server.address().port;
@@ -385,6 +400,30 @@ app.post('/api/applications', async (req, res) => {
     const newApp = new Application(req.body);
     await newApp.save();
     res.status(201).json(newApp);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/applications/accept', async (req, res) => {
+  try {
+    const { applicationId } = req.body;
+    if (!applicationId) {
+      return res.status(400).json({ error: 'applicationId is required' });
+    }
+
+    if (!isMongoConnected()) {
+      const app = mockApplications.find(a => a.id === applicationId);
+      if (!app) return res.status(404).json({ error: 'Application not found' });
+      app.status = 'Accepted';
+      return res.json({ message: 'Application accepted (Mock Mode)', application: app });
+    }
+
+    const app = await Application.findByIdAndUpdate(applicationId, { status: 'Accepted' }, { new: true });
+    if (!app) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    res.json({ message: 'Application accepted successfully', application: app });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

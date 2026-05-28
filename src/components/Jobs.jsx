@@ -48,7 +48,8 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
           fetchIPLocation();
         },
         { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
+
+  );
     } else {
       fetchIPLocation();
     }
@@ -266,6 +267,7 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
             </button>
           </div>
         </div>
+      </div>
       
 
       <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
@@ -462,12 +464,14 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
     studentLocation={studentLocation}
   />
 )}
+
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
-      </div>
-  </motion.div>
+        </div>
+      )}
+    </motion.div>
   );
 };
 

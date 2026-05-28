@@ -84,22 +84,75 @@ function App() {
   useEffect(() => {
     const fetchBackendData = async () => {
       try {
+        // Fetch jobs
+        let jobsData = [];
         const jobsRes = await fetch(`${API_BASE_URL}/api/jobs`);
         if (jobsRes.ok) {
-          const jobsData = await jobsRes.json();
+          jobsData = await jobsRes.json();
           if (jobsData) {
             setGlobalJobs(jobsData);
           }
         }
+
+        // Fetch applications
+        let appsData = [];
         const appsRes = await fetch(`${API_BASE_URL}/api/applications`);
         if (appsRes.ok) {
-          const appsData = await appsRes.json();
+          appsData = await appsRes.json();
           if (appsData) {
             setApplications(appsData);
           }
         }
+
+        // Fetch users
+        const usersRes = await fetch(`${API_BASE_URL}/api/users`);
+        if (usersRes.ok) {
+          const usersData = await usersRes.json();
+          if (usersData && usersData.length > 0) {
+            // Map students dynamically linking to actual applications
+            const dbStudents = usersData.filter(u => u.role === 'student').map(u => {
+              const studentApps = appsData.filter(app => app.studentEmail === u.email);
+              const appliedJobs = studentApps.map(app => app.jobId);
+              return {
+                id: u._id || u.id,
+                name: u.name,
+                email: u.email,
+                college: u.college || 'University',
+                major: u.major || 'Undeclared',
+                appliedJobs: appliedJobs,
+                rating: u.rating || 5.0,
+                completedGigs: u.completedGigs || studentApps.filter(a => a.status === 'Accepted').length,
+                earnings: '₹' + (u.earnings || (studentApps.filter(a => a.status === 'Accepted').length * 500)).toLocaleString(),
+                status: u.status || 'Active',
+                avatar: u.avatar || u.name.substring(0, 2).toUpperCase()
+              };
+            });
+
+            // Map employers dynamically linking to actual posted jobs
+            const dbEmployers = usersData.filter(u => u.role === 'employer').map(u => {
+              const myJobs = jobsData.filter(job => job.postedByEmail === u.email);
+              const postedJobs = myJobs.map(job => job.id);
+              const myJobIds = myJobs.map(j => j.id);
+              const totalHired = appsData.filter(app => myJobIds.includes(app.jobId) && app.status === 'Accepted').length;
+              return {
+                id: u._id || u.id,
+                name: u.name,
+                email: u.email,
+                contact: u.contact || u.name,
+                postedJobs: postedJobs,
+                rating: u.rating || 5.0,
+                totalHired: u.totalHired || totalHired,
+                status: u.status || 'Active',
+                type: u.businessType || 'Local Business'
+              };
+            });
+
+            setStudents(dbStudents);
+            setEmployers(dbEmployers);
+          }
+        }
       } catch (err) {
-        console.error("Backend not running or DB empty, using default frontend data.");
+        console.error("Backend not running or DB empty, using default frontend data.", err);
       }
     };
     fetchBackendData();
@@ -211,11 +264,11 @@ function App() {
           </motion.div>
         ) : userRole === 'admin' ? (
           <motion.div key="admin-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <AdminDashboard globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} students={students} setStudents={setStudents} employers={employers} setEmployers={setEmployers} goHome={goHome} />
+            <AdminDashboard globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} students={students} setStudents={setStudents} employers={employers} setEmployers={setEmployers} applications={applications} setApplications={handleSetApplications} goHome={goHome} />
           </motion.div>
         ) : userRole === 'employer' ? (
           <motion.div key="employer-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
+            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} setApplications={handleSetApplications} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
           </motion.div>
         ) : (
           <motion.div key="student-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>

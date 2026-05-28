@@ -4,11 +4,18 @@ import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, 
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
 
-const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], userProfile, globalJobs = [], setGlobalJobs, goHome }) => {
+const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setApplications, userProfile, globalJobs = [], setGlobalJobs, goHome }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const myGigs = globalJobs.filter(job => job.postedByEmail === userProfile?.email);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  
+  // Messaging overlay state
+  const [activeChat, setActiveChat] = useState(null);
+  const [chatMessage, setChatMessage] = useState('');
+  const [chatHistory, setChatHistory] = useState({});
+  const [selectedAppId, setSelectedAppId] = useState(null);
 
   // Subscription state keyed by employer's email
   const [subscriptionState, setSubscriptionState] = useState(() => {
@@ -31,20 +38,30 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
 
   const handleAccept = async (app) => {
     try {
-      // Placeholder: send accept request to backend (adjust endpoint as needed)
+      const appId = app.id || app._id;
       const response = await fetch(`${API_BASE_URL}/api/applications/accept`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ applicationId: app.id })
+        body: JSON.stringify({ applicationId: appId })
       });
       if (response.ok) {
-        console.log('Application accepted', app.id);
-        // Optionally update UI state if you have a setter for applications
+        console.log('Application accepted successfully', appId);
+        if (setApplications) {
+          setApplications(prev => prev.map(a => (a.id === appId || a._id === appId) ? { ...a, status: 'Accepted' } : a));
+        }
       } else {
         console.warn('Failed to accept application', response.status);
+        // Fallback to optimistic UI update if backend status isn't 200 (useful during offline/mock state)
+        if (setApplications) {
+          setApplications(prev => prev.map(a => (a.id === appId || a._id === appId) ? { ...a, status: 'Accepted' } : a));
+        }
       }
     } catch (err) {
       console.error('Error accepting application', err);
+      // Fallback update
+      if (setApplications) {
+        setApplications(prev => prev.map(a => (a.id === app.id || a._id === app._id) ? { ...a, status: 'Accepted' } : a));
+      }
     }
   };
 
@@ -85,7 +102,6 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
       const data = await res.json();
       if (data && data.length > 0) {
         latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-        setMapCenter(latlng);
       }
     } catch (err) {
       console.error("Geocoding failed:", err);
@@ -203,10 +219,22 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '3rem', flexWrap: 'wrap', gap: '1rem' }}>
                 <div>
                   <h2 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px' }}>My Posted Gigs</h2>
+                  <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                    <p style={{ color: 'var(--text-muted)' }}>
+                      {hasActiveSubscription ? 'Unlimited Plan Active' : `Credits Available: ${subscriptionState.credits}`}
+                    </p>
+                    <button onClick={() => setShowPaymentModal(true)} style={{ background: 'transparent', border: '1px solid var(--accent)', color: 'var(--accent)', padding: '0.3rem 0.8rem', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer' }}>
+                      Buy More
+                    </button>
+                  </div>
                 </div>
                 <button 
                   onClick={() => {
-                    setShowPostModal(true);
+                    if (!hasActiveSubscription && !hasCredits) {
+                      setShowPaymentModal(true);
+                    } else {
+                      setShowPostModal(true);
+                    }
                   }}
                   className="btn-primary" 
                   style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.85rem 1.5rem', borderRadius: '999px', background: 'linear-gradient(135deg, var(--accent), #4c1d95)', boxShadow: '0 4px 20px rgba(139, 92, 246, 0.4)' }}
@@ -220,9 +248,10 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                 const myApplications = applications.filter(app => myGigs.some(g => g.id === app.jobId));
                 if (myApplications.length === 0) return null;
 
-                const firstApp = myApplications[0];
-                const appliedJob = myGigs.find(g => g.id === firstApp.jobId);
-                const mockStudentLoc = firstApp.studentLoc || [28.6139, 77.2090]; 
+                const activeAppId = selectedAppId || (myApplications[0].id || myApplications[0]._id);
+                const activeApp = myApplications.find(app => (app.id === activeAppId || app._id === activeAppId)) || myApplications[0];
+                const appliedJob = myGigs.find(g => g.id === activeApp.jobId);
+                const mockStudentLoc = activeApp.studentLoc || [28.6139, 77.2090]; 
                 return (
                   <div className="glass-panel" style={{ marginBottom: '3rem', padding: '2rem', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.15)' }}>
                     <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '1.5rem', color: 'white' }}>Recent Applications & Live Tracking</h3>
@@ -230,8 +259,21 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                       <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
                         {myApplications.map((app, idx) => {
                           const job = myGigs.find(g => g.id === app.jobId);
+                          const isSelected = (app.id || app._id) === activeAppId;
                           return (
-                            <div key={idx} style={{ background: 'rgba(255,255,255,0.05)', padding: '1.25rem', borderRadius: '16px', borderLeft: '4px solid #10b981' }}>
+                            <div 
+                              key={idx} 
+                              onClick={() => setSelectedAppId(app.id || app._id)}
+                              style={{ 
+                                background: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'rgba(255,255,255,0.04)', 
+                                padding: '1.25rem', 
+                                borderRadius: '16px', 
+                                borderLeft: isSelected ? '4px solid var(--accent)' : '4px solid #10b981',
+                                border: isSelected ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid transparent',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease-in-out'
+                              }}
+                            >
                               <h4 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '0.2rem' }}>{app.studentName}</h4>
                               <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{app.studentCollege} • {app.studentMajor}</p>
                               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Applied for: <strong style={{ color: 'white' }}>{job?.title}</strong></p>
@@ -239,9 +281,42 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontWeight: '600', fontSize: '0.85rem' }}>
                                 <MapPin size={16} /> Location Tracking Active
                               </div>
-                              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
-                                 <button className="btn-primary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: 'none' }} onClick={() => handleAccept(app)}>Accept</button>
-                                 <button className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1 }}>Message</button>
+                              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
+                                 <button 
+                                   className={app.status === 'Accepted' ? "btn-secondary" : "btn-primary"} 
+                                   style={{ 
+                                     padding: '0.4rem 0.8rem', 
+                                     fontSize: '0.85rem', 
+                                     flex: 1, 
+                                     background: app.status === 'Accepted' ? 'rgba(16, 185, 129, 0.1)' : 'linear-gradient(135deg, #10b981, #059669)', 
+                                     border: app.status === 'Accepted' ? '1px solid #10b981' : 'none',
+                                     color: app.status === 'Accepted' ? '#10b981' : 'white',
+                                     boxShadow: 'none',
+                                     cursor: app.status === 'Accepted' ? 'default' : 'pointer'
+                                   }} 
+                                   onClick={() => app.status !== 'Accepted' && handleAccept(app)}
+                                   disabled={app.status === 'Accepted'}
+                                 >
+                                   {app.status === 'Accepted' ? 'Accepted' : 'Accept'}
+                                 </button>
+                                 <button 
+                                   className="btn-secondary" 
+                                   style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, cursor: 'pointer' }}
+                                   onClick={() => {
+                                     const studentEmail = app.studentEmail || 'student@example.com';
+                                     setActiveChat(app);
+                                     if (!chatHistory[studentEmail]) {
+                                       setChatHistory(prev => ({
+                                         ...prev,
+                                         [studentEmail]: [
+                                           { sender: 'student', text: `Hi, I applied to your gig: ${job?.title || 'Gig'}. I have relevant skills and am ready to start immediately!`, time: app.appliedAt || '12:00 PM' }
+                                         ]
+                                       }));
+                                     }
+                                   }}
+                                 >
+                                   Message
+                                 </button>
                               </div>
                             </div>
                           );
@@ -250,7 +325,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                       <div style={{ flex: '2 1 400px', height: '350px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <RealMap 
                           userRole="employer"
-                          center={appliedJob?.latlng || [28.6239, 77.2000]}
+                          center={mockStudentLoc}
                           employerJob={appliedJob}
                           studentLocation={mockStudentLoc}
                         />
@@ -422,6 +497,151 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], user
                   <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem' }}>Publish Gig</button>
                 </div>
               </form>
+            </motion.div>
+          </motion.div>
+        )}
+        
+        {activeChat && (
+          <motion.div 
+            initial={{ opacity: 0, y: 100, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 100, scale: 0.95 }}
+            style={{ 
+              position: 'fixed', bottom: '2rem', right: '2rem', width: '360px', height: '480px',
+              background: 'rgba(24, 24, 27, 0.9)', backdropFilter: 'blur(16px)',
+              border: '1px solid rgba(139, 92, 246, 0.3)', borderRadius: '24px',
+              boxShadow: '0 20px 40px rgba(0,0,0,0.6)', zIndex: 1000,
+              display: 'flex', flexDirection: 'column', overflow: 'hidden'
+            }}
+          >
+            {/* Chat Header */}
+            <div style={{ background: 'linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(76, 29, 149, 0.2))', padding: '1.25rem', borderBottom: '1px solid rgba(255,255,255,0.08)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <div style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%', boxShadow: '0 0 8px #10b981' }} />
+                <div>
+                  <h4 style={{ fontSize: '1.05rem', fontWeight: '700', color: 'white', margin: 0 }}>{activeChat.studentName}</h4>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Online • Candidate</span>
+                </div>
+              </div>
+              <button onClick={() => setActiveChat(null)} style={{ background: 'transparent', border: 'none', color: '#a1a1aa', cursor: 'pointer' }} className="card-hover">
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Chat Messages */}
+            <div style={{ flex: 1, padding: '1.25rem', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.75rem' }} className="custom-scrollbar">
+              {(chatHistory[activeChat.studentEmail || 'student@example.com'] || []).map((msg, idx) => {
+                const isMe = msg.sender === 'employer';
+                return (
+                  <div key={idx} style={{ 
+                    alignSelf: isMe ? 'flex-end' : 'flex-start',
+                    maxWidth: '75%',
+                    background: isMe ? 'linear-gradient(135deg, var(--accent), #6d28d9)' : 'rgba(255,255,255,0.06)',
+                    color: 'white',
+                    padding: '0.75rem 1rem',
+                    borderRadius: isMe ? '18px 18px 4px 18px' : '18px 18px 18px 4px',
+                    fontSize: '0.9rem',
+                    lineHeight: '1.4'
+                  }}>
+                    {msg.text}
+                    <span style={{ display: 'block', fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textAlign: 'right', marginTop: '0.25rem' }}>{msg.time}</span>
+                  </div>
+                );
+              })}
+            </div>
+            
+            {/* Chat Input */}
+            <form 
+              onSubmit={(e) => {
+                e.preventDefault();
+                if (!chatMessage.trim()) return;
+                const studentEmail = activeChat.studentEmail || 'student@example.com';
+                const newMsg = {
+                  sender: 'employer',
+                  text: chatMessage,
+                  time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                };
+                setChatHistory(prev => ({
+                  ...prev,
+                  [studentEmail]: [...(prev[studentEmail] || []), newMsg]
+                }));
+                setChatMessage('');
+                
+                // Simulate candidate reply after a short delay
+                setTimeout(() => {
+                  const replies = [
+                    "Sounds great! Thank you so much for the opportunity.",
+                    "Yes, I am available at that time. I will be there!",
+                    "Awesome, I have already updated my calendar. Looking forward to it!",
+                    "Thank you! I will review the instructions and see you soon."
+                  ];
+                  const randomReply = replies[Math.floor(Math.random() * replies.length)];
+                  setChatHistory(prev => ({
+                    ...prev,
+                    [studentEmail]: [
+                      ...(prev[studentEmail] || []),
+                      { sender: 'student', text: randomReply, time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+                    ]
+                  }));
+                }, 1500);
+              }}
+              style={{ padding: '1rem', borderTop: '1px solid rgba(255,255,255,0.08)', background: 'rgba(0,0,0,0.2)', display: 'flex', gap: '0.5rem' }}
+            >
+              <input 
+                type="text" 
+                value={chatMessage} 
+                onChange={(e) => setChatMessage(e.target.value)} 
+                placeholder="Type a message..." 
+                style={{ flex: 1, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '0.6rem 1rem', color: 'white', outline: 'none', fontSize: '0.9rem' }} 
+              />
+              <button type="submit" className="btn-primary" style={{ padding: '0.6rem 1.25rem', borderRadius: '12px', background: 'var(--accent)', fontSize: '0.85rem' }}>Send</button>
+            </form>
+          </motion.div>
+        )}
+        
+        {showPaymentModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', textAlign: 'center' }}
+            >
+              <button onClick={() => setShowPaymentModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}>
+                <X size={28} />
+              </button>
+              <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '1rem' }}>Choose a Plan</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>To post gigs and hire students, please select a plan below. Payments are securely processed via Razorpay.</p>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ padding: '1.5rem', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ textAlign: 'left' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>Single Gig</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Post 1 job listing</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent)' }}>₹29</span>
+                    <a href="https://razorpay.me/@vishwanaththippayanadurgavenk" target="_blank" rel="noreferrer" className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textDecoration: 'none' }}>Pay Now</a>
+                  </div>
+                </div>
+
+                <div style={{ padding: '1.5rem', background: 'rgba(139, 92, 246, 0.1)', border: '1px solid rgba(139, 92, 246, 0.4)', borderRadius: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', top: '0', left: '0', background: 'var(--accent)', color: 'white', fontSize: '0.7rem', fontWeight: '700', padding: '0.2rem 0.75rem', borderBottomRightRadius: '8px' }}>BEST VALUE</div>
+                  <div style={{ textAlign: 'left', marginTop: '0.5rem' }}>
+                    <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'white' }}>Unlimited Plan</h3>
+                    <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.25rem' }}>Unlimited gigs for 1 month</p>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--accent)' }}>₹199</span>
+                    <a href="https://razorpay.me/@vishwanaththippayanadurgavenk" target="_blank" rel="noreferrer" className="btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', textDecoration: 'none', background: 'linear-gradient(135deg, var(--accent), #4c1d95)' }}>Pay Now</a>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                After payment, your credits will be updated shortly by our team.
+              </div>
             </motion.div>
           </motion.div>
         )}
