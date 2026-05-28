@@ -17,6 +17,16 @@ const RealMap = ({
   const markersRef = useRef([]);
   const routeRef = useRef(null);
 
+  // Cleanup map on unmount to prevent "Map container is already initialized" error
+  useEffect(() => {
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
   // Initialise Leaflet map only when center is available and not yet initialized
   useEffect(() => {
     if (!window.L || !mapRef.current || !center || mapInstanceRef.current) return;
@@ -27,7 +37,7 @@ const RealMap = ({
         attributionControl: false,
       }).setView(initCenter, 13);
       window.L.tileLayer(
-        import.meta.env.VITE_MAP_TILE_URL,
+        import.meta.env.VITE_MAP_TILE_URL || 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
         { attribution: '&copy; OpenStreetMap contributors' }
       ).addTo(mapInstanceRef.current);
       // Ensure the map container sizes correctly after mount
