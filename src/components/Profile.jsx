@@ -8,6 +8,9 @@ const Profile = ({ userData, onUpdateProfile }) => {
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [newReview, setNewReview] = useState({ title: '', employerName: '', rating: '5', comment: '' });
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+  const [showPreferences, setShowPreferences] = useState(false);
   const fileInputRef = useRef(null);
 
   useEffect(() => {
@@ -158,12 +161,78 @@ const Profile = ({ userData, onUpdateProfile }) => {
           </div>
           
           <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <button className="btn-primary" style={{ width: '100%', padding: '1rem' }}>Edit Profile</button>
-            <button className="btn-secondary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem' }}>
+            <button onClick={() => {
+              setEditData({ name: profile.name, major: profile.major, location: profile.location, about: profile.about });
+              setIsEditing(true);
+            }} className="btn-primary" style={{ width: '100%', padding: '1rem' }}>Edit Profile</button>
+            <button onClick={() => setShowPreferences(true)} className="btn-secondary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem' }}>
               <Settings size={20} /> Preferences
             </button>
           </div>
         </div>
+
+        <AnimatePresence>
+          {isEditing && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid var(--primary)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+              >
+                <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '1.5rem' }}>Edit Profile</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <input type="text" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} placeholder="Full Name" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
+                  <input type="text" value={editData.major} onChange={e => setEditData({...editData, major: e.target.value})} placeholder="Major / Degree" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
+                  <input type="text" value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})} placeholder="Location" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
+                  <textarea value={editData.about} onChange={e => setEditData({...editData, about: e.target.value})} placeholder="About Me" rows={4} style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%', resize: 'vertical' }} />
+                  
+                  <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                    <button onClick={() => setIsEditing(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                    <button onClick={() => {
+                      setProfile({ ...profile, ...editData });
+                      if (onUpdateProfile) onUpdateProfile(editData);
+                      setIsEditing(false);
+                    }} className="btn-primary" style={{ flex: 1 }}>Save Changes</button>
+                  </div>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {showPreferences && (
+            <motion.div 
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+            >
+              <motion.div 
+                initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid var(--accent)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+              >
+                <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '1.5rem' }}>Preferences</h2>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Email Notifications</span>
+                    <input type="checkbox" defaultChecked style={{ transform: 'scale(1.5)', cursor: 'pointer' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>SMS Alerts</span>
+                    <input type="checkbox" style={{ transform: 'scale(1.5)', cursor: 'pointer' }} />
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: '600' }}>Profile Visibility</span>
+                    <select style={{ padding: '0.5rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white' }}>
+                      <option value="public">Public (Employers can find me)</option>
+                      <option value="private">Private (Only when I apply)</option>
+                    </select>
+                  </div>
+                  <button onClick={() => setShowPreferences(false)} className="btn-primary" style={{ marginTop: '1rem', width: '100%', padding: '0.8rem' }}>Save Preferences</button>
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-main)' }}>
