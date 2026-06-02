@@ -197,11 +197,10 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     if (latlng) {
       // Reverse Geocode
       try {
-        const res = await fetch(`https://photon.komoot.io/reverse?lon=${latlng[1]}&lat=${latlng[0]}`);
+        const res = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?latlng=${latlng[0]},${latlng[1]}&key=${import.meta.env.VITE_GOOGLE_MAPS_API_KEY}`);
         const data = await res.json();
-        if (data && data.features && data.features.length > 0) {
-          const props = data.features[0].properties;
-          locationString = [props.name, props.city, props.state].filter(Boolean).join(', ');
+        if (data && data.results && data.results.length > 0) {
+          locationString = data.results[0].formatted_address;
         }
       } catch (err) {
         console.error("Reverse geocoding failed:", err);

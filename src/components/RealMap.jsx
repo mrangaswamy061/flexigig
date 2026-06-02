@@ -1,7 +1,13 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
+import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { Loader } from 'lucide-react';
 
-// Removed DEFAULT_CENTER constant as it is no longer needed
+const containerStyle = {
+  width: '100%',
+  height: '100%',
+  minHeight: '400px',
+  borderRadius: 'inherit'
+};
 
 const RealMap = ({
   jobs = [],
@@ -12,205 +18,143 @@ const RealMap = ({
   employerJob,
   studentLocation,
 }) => {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const markersRef = useRef([]);
-  const routeRef = useRef(null);
+  const { isLoaded } = useJsApiLoader({
+    id: 'google-map-script',
+    googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY
+  });
 
-  // Cleanup map on unmount to prevent "Map container is already initialized" error
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
+  const [map, setMap] = useState(null);
+  const [activeMarker, setActiveMarker] = useState(null);
+
+  const onLoad = useCallback(function callback(map) {
+    setMap(map);
   }, []);
 
-  // Initialise Leaflet map only when center is available and not yet initialized
-  useEffect(() => {
-    if (!window.L || !mapRef.current || !center || mapInstanceRef.current) return;
-    const initCenter = center;
-    try {
-      mapInstanceRef.current = window.L.map(mapRef.current, {
-        zoomControl: false,
-        attributionControl: false,
-      }).setView(initCenter, 13);
-      const tileUrl = (import.meta.env.VITE_MAP_TILE_URL && import.meta.env.VITE_MAP_TILE_URL.trim() !== '') 
-        ? import.meta.env.VITE_MAP_TILE_URL 
-        : 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png';
-        
-      window.L.tileLayer(
-        tileUrl,
-        { attribution: '&copy; OpenStreetMap contributors' }
-      ).addTo(mapInstanceRef.current);
-      // Ensure the map container sizes correctly after mount
-      setTimeout(() => {
-        mapInstanceRef.current && mapInstanceRef.current.invalidateSize();
-      }, 500);
-    } catch (err) {
-      console.error('Failed to initialize Leaflet map:', err);
-    }
-  }, [center]);
+  const onUnmount = useCallback(function callback(map) {
+    setMap(null);
+  }, []);
 
-  // Update map view when the center prop changes
-  useEffect(() => {
-    if (!mapInstanceRef.current || !center) return;
-    try {
-      mapInstanceRef.current.setView(center, 13);
-    } catch (err) {
-      console.error('Failed to set Leaflet view:', err);
-    }
-  }, [center]);
+  const effectiveCenter = center ? { lat: center[0], lng: center[1] } : { lat: 28.6139, lng: 77.2090 };
+  const hasValidCenter = center && Array.isArray(center) && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1]);
 
-  // Update markers, routes and pop‑ups whenever relevant data changes
-  useEffect(() => {
-    const map = mapInstanceRef.current;
-    if (!map) return;
-    const effectiveCenter = center;
-
-    // Clear previous markers and routes
-    markersRef.current.forEach((m) => {
-      try {
-        map.removeLayer(m);
-      } catch (_) {}
-    });
-    markersRef.current = [];
-    if (routeRef.current) {
-      try {
-        map.removeLayer(routeRef.current);
-      } catch (_) {}
-      routeRef.current = null;
-    }
-
-    // Leaflet icons
-    let myIcon, employerIcon, studentIcon;
-    try {
-      myIcon = window.L.icon({
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      });
-
-      employerIcon = window.L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-green.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-      });
-
-      studentIcon = window.L.icon({
-        iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-orange.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-      });
-    } catch (iconErr) {
-      console.error('Failed to create Leaflet icons:', iconErr);
-      return;
-    }
-
-    const hasValidCenter = Array.isArray(effectiveCenter) && effectiveCenter.length === 2 && !isNaN(effectiveCenter[0]) && !isNaN(effectiveCenter[1]);
-
-    // 1. Show the student's own location if role is student
-    if (userRole === 'student' && hasValidCenter) {
-      const locationText =
-        studentLocation && studentLocation !== 'Campus Center'
-          ? studentLocation
-          : 'Exact Detected Location';
-      try {
-        const centerMarker = window.L.marker(effectiveCenter, { icon: studentIcon })
-          .bindPopup(`<b>Your Location</b><br/>${locationText}`)
-          .addTo(map);
-        markersRef.current.push(centerMarker);
-      } catch (err) {
-        console.error('Failed to add student marker:', err);
-      }
-    }
-
-    // 2. Show ONLY the student's location if role is employer
-    if (
-      userRole === 'employer' &&
-      Array.isArray(studentLocation) &&
-      studentLocation.length === 2 &&
-      !isNaN(studentLocation[0]) &&
-      !isNaN(studentLocation[1])
-    ) {
-      try {
-        const studentMarker = window.L.marker(studentLocation, { icon: studentIcon })
-          .bindPopup('<b>Student Location</b><br/>Live Tracking Active')
-          .addTo(map);
-        markersRef.current.push(studentMarker);
-      } catch (err) {
-        console.error('Failed to add student marker in employer view:', err);
-      }
-    }
-
-    // 3. Show all jobs if it is NOT employer view (i.e. student or default view!)
-    if (userRole !== 'employer') {
-      jobs.forEach((job) => {
-        if (!job.latlng || !Array.isArray(job.latlng) || job.latlng.length !== 2 || isNaN(job.latlng[0]) || isNaN(job.latlng[1])) return;
-        try {
-          const markerIcon = job.employerType === 'Local Business' ? employerIcon : myIcon;
-          const marker = window.L.marker(job.latlng, { icon: markerIcon })
-            .bindPopup(`
-              <div style="font-family: 'Outfit', sans-serif;">
-                <h3 style="margin: 0 0 5px 0; font-size: 16px;">${job.title}</h3>
-                <p style="margin: 0 0 3px 0; font-size: 13px;"><b>Company:</b> ${job.dept}</p>
-                <p style="margin: 0 0 3px 0; font-size: 13px;"><b>Work Hour:</b> ${job.duration}</p>
-                <p style="margin: 0 0 3px 0; font-size: 13px;"><b>Time:</b> Flexible</p>
-                <p style="margin: 0 0 0 0; font-size: 13px; color: #10b981; font-weight: bold;"><b>Payment:</b> ${job.pay}</p>
-              </div>
-            `);
-          if (selectedJob && selectedJob.id === job.id) {
-            marker.openPopup();
-          }
-          marker.addTo(map);
-          markersRef.current.push(marker);
-        } catch (err) {
-          console.error('Failed to add job marker:', err);
-        }
-      });
-    }
-
-    // 4. If an applied job is selected, draw a green route from the centre without moving focus
-    if (appliedJob && appliedJob.latlng && Array.isArray(appliedJob.latlng) && appliedJob.latlng.length === 2 && !isNaN(appliedJob.latlng[0]) && !isNaN(appliedJob.latlng[1]) && hasValidCenter) {
-      try {
-        const latlngs = [effectiveCenter, appliedJob.latlng];
-        routeRef.current = window.L.polyline(latlngs, {
-          color: 'green',
-          dashArray: '5, 10',
-        }).addTo(map);
-        // Removed fitBounds to ensure map focus remains entirely centered on the student's location
-      } catch (err) {
-        console.error('Failed to draw applied job route:', err);
-      }
-    }
-  }, [jobs, center, selectedJob, appliedJob, userRole, employerJob, studentLocation]);
-
-  if (!center) {
+  if (!isLoaded || !center) {
     return (
       <div style={{ width: '100%', height: '100%', minHeight: '600px', borderRadius: 'inherit', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
           <Loader className="lucide-spin" size={32} color="var(--primary)" style={{ animation: 'spin 1s linear infinite' }} />
-          <span style={{ fontSize: '1.05rem', fontWeight: '500' }}>Detecting location and loading radar...</span>
+          <span style={{ fontSize: '1.05rem', fontWeight: '500' }}>Loading Google Maps...</span>
         </div>
       </div>
     );
   }
 
+  // Icons
+  const studentIcon = "http://maps.google.com/mapfiles/ms/icons/orange-dot.png";
+  const myIcon = "http://maps.google.com/mapfiles/ms/icons/blue-dot.png";
+  const employerIcon = "http://maps.google.com/mapfiles/ms/icons/green-dot.png";
+
   return (
-    <div
-      ref={mapRef}
-      style={{ width: '100%', height: '100%', minHeight: '400px', borderRadius: 'inherit', zIndex: 0 }}
-    />
+    <GoogleMap
+      mapContainerStyle={containerStyle}
+      center={effectiveCenter}
+      zoom={13}
+      onLoad={onLoad}
+      onUnmount={onUnmount}
+      options={{
+        disableDefaultUI: true,
+        styles: [
+          { elementType: "geometry", stylers: [{ color: "#242f3e" }] },
+          { elementType: "labels.text.stroke", stylers: [{ color: "#242f3e" }] },
+          { elementType: "labels.text.fill", stylers: [{ color: "#746855" }] },
+          { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+          { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#d59563" }] },
+          { featureType: "poi.park", elementType: "geometry", stylers: [{ color: "#263c3f" }] },
+          { featureType: "poi.park", elementType: "labels.text.fill", stylers: [{ color: "#6b9a76" }] },
+          { featureType: "road", elementType: "geometry", stylers: [{ color: "#38414e" }] },
+          { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#212a37" }] },
+          { featureType: "road", elementType: "labels.text.fill", stylers: [{ color: "#9ca5b3" }] },
+          { featureType: "road.highway", elementType: "geometry", stylers: [{ color: "#746855" }] },
+          { featureType: "road.highway", elementType: "geometry.stroke", stylers: [{ color: "#1f2835" }] },
+          { featureType: "road.highway", elementType: "labels.text.fill", stylers: [{ color: "#f3d19c" }] },
+          { featureType: "water", elementType: "geometry", stylers: [{ color: "#17263c" }] },
+          { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#515c6d" }] },
+          { featureType: "water", elementType: "labels.text.stroke", stylers: [{ color: "#17263c" }] }
+        ]
+      }}
+    >
+      {/* 1. Show the student's own location if role is student */}
+      {userRole === 'student' && hasValidCenter && (
+        <Marker 
+          position={effectiveCenter} 
+          icon={studentIcon}
+          onClick={() => setActiveMarker('student')}
+        >
+          {activeMarker === 'student' && (
+            <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+              <div style={{ color: 'black' }}>
+                <b>Your Location</b><br/>{studentLocation && studentLocation !== 'Campus Center' ? studentLocation : 'Exact Detected Location'}
+              </div>
+            </InfoWindow>
+          )}
+        </Marker>
+      )}
+
+      {/* 2. Show ONLY the student's location if role is employer */}
+      {userRole === 'employer' && studentLocation && Array.isArray(studentLocation) && (
+        <Marker 
+          position={{ lat: studentLocation[0], lng: studentLocation[1] }} 
+          icon={studentIcon}
+          onClick={() => setActiveMarker('student_employer')}
+        >
+          {activeMarker === 'student_employer' && (
+            <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+              <div style={{ color: 'black' }}>
+                <b>Student Location</b><br/>Live Tracking Active
+              </div>
+            </InfoWindow>
+          )}
+        </Marker>
+      )}
+
+      {/* 3. Show all jobs if it is NOT employer view */}
+      {userRole !== 'employer' && jobs.map(job => {
+        if (!job.latlng || !Array.isArray(job.latlng) || job.latlng.length !== 2) return null;
+        const isSelected = (selectedJob && selectedJob.id === job.id) || activeMarker === job.id;
+        return (
+          <Marker
+            key={job.id}
+            position={{ lat: job.latlng[0], lng: job.latlng[1] }}
+            icon={job.employerType === 'Local Business' ? employerIcon : myIcon}
+            onClick={() => setActiveMarker(job.id)}
+          >
+            {isSelected && (
+              <InfoWindow onCloseClick={() => setActiveMarker(null)}>
+                <div style={{ fontFamily: "'Outfit', sans-serif", color: 'black' }}>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '16px' }}>{job.title}</h3>
+                  <p style={{ margin: '0 0 3px 0', fontSize: '13px' }}><b>Company:</b> {job.dept}</p>
+                  <p style={{ margin: '0 0 3px 0', fontSize: '13px' }}><b>Work Hour:</b> {job.duration}</p>
+                  <p style={{ margin: '0 0 3px 0', fontSize: '13px' }}><b>Time:</b> Flexible</p>
+                  <p style={{ margin: '0', fontSize: '13px', color: '#10b981', fontWeight: 'bold' }}><b>Payment:</b> {job.pay}</p>
+                </div>
+              </InfoWindow>
+            )}
+          </Marker>
+        );
+      })}
+
+      {/* 4. If an applied job is selected, draw a route */}
+      {appliedJob && appliedJob.latlng && Array.isArray(appliedJob.latlng) && hasValidCenter && (
+        <Polyline
+          path={[effectiveCenter, { lat: appliedJob.latlng[0], lng: appliedJob.latlng[1] }]}
+          options={{
+            strokeColor: '#10b981',
+            strokeOpacity: 0.8,
+            strokeWeight: 4,
+          }}
+        />
+      )}
+    </GoogleMap>
   );
 };
 
-export default RealMap;
+export default React.memo(RealMap);

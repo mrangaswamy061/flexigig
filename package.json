@@ -10,6 +10,7 @@
     "view-db": "node backend/view-db.js"
   },
   "dependencies": {
+    "@react-google-maps/api": "^2.20.8",
     "dotenv": "^17.4.2",
     "framer-motion": "^10.16.4",
     "lucide-react": "^0.292.0",
