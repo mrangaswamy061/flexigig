@@ -38,7 +38,7 @@ function App() {
 
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {isLoggedIn && <Navbar />}
+      {isLoggedIn && userRole !== 'employer' && <Navbar />}
       
       <AnimatePresence mode="wait">
         <Routes>
