@@ -1,13 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { LayoutDashboard, Briefcase, User } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
-  const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'jobs', label: 'Find Gigs', icon: Briefcase },
-    { id: 'profile', label: 'Profile', icon: User },
-  ];
+const Navbar = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const { userProfile, userRole, logout } = useAuth();
+  
+  const currentPath = location.pathname;
+
+  let navItems = [];
+  
+  if (userRole === 'student') {
+    navItems = [
+      { id: '/user/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: '/user/jobs', label: 'Find Gigs', icon: Briefcase },
+      { id: '/user/profile', label: 'Profile', icon: User },
+    ];
+  } else if (userRole === 'employer') {
+    navItems = [
+      { id: '/business/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+      { id: '/business/profile', label: 'Profile', icon: User },
+    ];
+  } else if (userRole === 'admin') {
+    navItems = [
+      { id: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    ];
+  }
+
+  const goHome = () => {
+    logout();
+    navigate('/');
+  };
+
+  const getRoleLabel = () => {
+    if (userRole === 'student') return 'User';
+    if (userRole === 'employer') return 'Business Owner';
+    if (userRole === 'admin') return 'Admin';
+    return '';
+  };
 
   return (
     <nav className="glass-panel" style={{
@@ -21,19 +54,20 @@ const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
       zIndex: 50,
       border: '1px solid rgba(255, 255, 255, 0.1)'
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => setCurrentView('dashboard')}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => navigate(navItems[0]?.id || '/')}>
         <img src="/logo.png" alt="FlexiGig Logo" style={{ height: '55px', objectFit: 'contain' }} />
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.35rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
         {navItems.map(item => {
           const Icon = item.icon;
-          const isActive = currentView === item.id;
+          const isActive = currentPath === item.id;
           return (
             <button
               key={item.id}
-              onClick={() => setCurrentView(item.id)}
+              onClick={() => navigate(item.id)}
               style={{
+                position: 'relative',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.5rem',
@@ -44,7 +78,8 @@ const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
                 border: 'none',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 fontWeight: 600,
-                fontSize: '0.95rem'
+                fontSize: '0.95rem',
+                cursor: 'pointer'
               }}
             >
               <Icon size={18} color={isActive ? 'var(--primary)' : 'currentColor'} />
@@ -60,17 +95,17 @@ const Navbar = ({ currentView, setCurrentView, userProfile, goHome }) => {
       <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.4rem 1rem', borderRadius: '12px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.05)' }}>
           <div>
-            <p style={{ fontSize: '0.9rem', fontWeight: '600', lineHeight: '1' }}>{userProfile?.name?.split(' ')[0] || 'Alex'}</p>
-            <p style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '0.2rem' }}>Student</p>
+            <p style={{ fontSize: '0.9rem', fontWeight: '600', lineHeight: '1' }}>{userProfile?.name?.split(' ')[0] || 'User'}</p>
+            <p style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '0.2rem' }}>{getRoleLabel()}</p>
           </div>
         </div>
         <button 
           onClick={goHome} 
-          title="Back to Home"
-          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', padding: '0.55rem 1.1rem', borderRadius: '12px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.9rem', transition: 'all 0.3s' }}
+          title="Sign Out"
+          style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border-color)', padding: '0.55rem 1.1rem', borderRadius: '12px', color: 'var(--text-muted)', fontWeight: '600', fontSize: '0.9rem', transition: 'all 0.3s', cursor: 'pointer' }}
           className="card-hover"
         >
-          Home
+          Sign Out
         </button>
       </div>
     </nav>

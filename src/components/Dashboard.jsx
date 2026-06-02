@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TrendingUp, Clock, CheckCircle, ChevronRight, IndianRupee, Loader, Star, ArrowUpRight, MapPin, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../context/JobContext';
 
-const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [], applications = [], setApplications }) => {
+const Dashboard = () => {
+  const navigate = useNavigate();
+  const { userProfile } = useAuth();
+  const { globalJobs, applications, setApplications, appliedJobs } = useJobs();
+
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   

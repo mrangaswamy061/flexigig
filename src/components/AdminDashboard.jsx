@@ -27,7 +27,16 @@ const Badge = ({ label, color }) => (
   <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', fontSize: '0.75rem', fontWeight: '700', background: `${color}20`, color }}>{label}</span>
 );
 
-const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [], setStudents, employers = [], setEmployers, applications = [], setApplications }) => {
+import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../context/JobContext';
+import { useNavigate } from 'react-router-dom';
+
+const AdminDashboard = () => {
+  const navigate = useNavigate();
+  const { logout } = useAuth();
+  const { globalJobs, setGlobalJobs, applications, setApplications } = useJobs();
+  const students = []; // We can fetch students later or keep mock
+  const employers = []; // Same for employers
   const [tab, setTab] = useState('Overview');
   const [search, setSearch] = useState('');
 
@@ -124,9 +133,19 @@ const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [],
             <p style={{ color: 'rgba(255,255,255,0.85)', fontSize: '0.9rem' }}>FlexiGig Platform Management</p>
           </div>
         </div>
-        <button onClick={goHome} style={{ background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.3)', padding: '0.5rem 1.2rem', borderRadius: '10px', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
-          Sign Out
-        </button>
+          <button onClick={() => navigate('/')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '12px', color: 'white', fontWeight: '600' }} className="card-hover">
+            Home
+          </button>
+          <button 
+            onClick={() => {
+              logout();
+              navigate('/');
+            }} 
+            style={{ padding: '0.75rem 1rem', background: 'transparent', border: 'none', color: '#f87171', fontWeight: '600', cursor: 'pointer', borderRadius: '12px' }}
+            className="card-hover"
+          >
+            Sign Out
+          </button>
       </div>
 
       <main style={{ flex: 1, padding: '2rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>

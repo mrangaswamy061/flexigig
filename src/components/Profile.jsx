@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Award, BookOpen, Star, Settings, FileText, Loader, CheckCircle, Shield, MapPin, Camera, User } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
-const Profile = ({ userData, onUpdateProfile }) => {
+const Profile = () => {
+  const { userProfile: userData, updateProfile: onUpdateProfile } = useAuth();
   const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -147,9 +149,14 @@ const Profile = ({ userData, onUpdateProfile }) => {
           </div>
 
           <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '0.25rem', letterSpacing: '-0.5px' }}>{profile.name}</h2>
-          <p style={{ color: 'var(--primary)', fontWeight: '600', marginBottom: '0.5rem', fontSize: '1.1rem' }}>{profile.major}</p>
-          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1.25rem' }}>
-            <MapPin size={16} /> {profile.location}
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)', fontWeight: '600', marginBottom: '1.25rem', fontSize: '1.1rem', flexWrap: 'wrap' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              <MapPin size={16} /> {profile.location || 'Location not provided'}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.3)' }}>•</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {profile.contact || 'Phone not provided'}
+            </span>
           </div>
           
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', color: '#fbbf24', background: 'rgba(251, 191, 36, 0.1)', padding: '0.5rem 1rem', borderRadius: '999px', marginBottom: '1rem' }}>
@@ -160,7 +167,7 @@ const Profile = ({ userData, onUpdateProfile }) => {
           
           <div style={{ marginTop: '2.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
             <button onClick={() => {
-              setEditData({ name: profile.name, major: profile.major, location: profile.location, about: profile.about });
+              setEditData({ name: profile.name, contact: profile.contact, location: profile.location, about: profile.about });
               setIsEditing(true);
             }} className="btn-primary" style={{ width: '100%', padding: '1rem' }}>Edit Profile</button>
             <button onClick={() => setShowPreferences(true)} className="btn-secondary" style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', padding: '1rem' }}>
@@ -182,7 +189,7 @@ const Profile = ({ userData, onUpdateProfile }) => {
                 <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '1.5rem' }}>Edit Profile</h2>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   <input type="text" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} placeholder="Full Name" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
-                  <input type="text" value={editData.major} onChange={e => setEditData({...editData, major: e.target.value})} placeholder="Major / Degree" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
+                  <input type="text" value={editData.contact} onChange={e => setEditData({...editData, contact: e.target.value})} placeholder="Phone Number" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
                   <input type="text" value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})} placeholder="Location" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%' }} />
                   <textarea value={editData.about} onChange={e => setEditData({...editData, about: e.target.value})} placeholder="About Me" rows={4} style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid var(--border-color)', color: 'white', width: '100%', resize: 'vertical' }} />
                   

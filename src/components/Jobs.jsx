@@ -3,8 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, MapPin, IndianRupee, Clock, Loader, Bookmark, Building2, Navigation, Map, X, CheckCircle } from 'lucide-react';
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../context/JobContext';
 
-const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applications = [], setApplications }) => {
+const Jobs = () => {
+  const { userProfile } = useAuth();
+  const { globalJobs, applications, setApplications, appliedJobs, setAppliedJobs } = useJobs();
   const studentLocation = userProfile?.location || 'Campus Center';
   const [searchTerm, setSearchTerm] = useState('');
   const [radiusFilter, setRadiusFilter] = useState(5); // Default 5 km

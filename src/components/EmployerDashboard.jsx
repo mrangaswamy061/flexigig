@@ -1,10 +1,16 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Star } from 'lucide-react';
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
+import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useJobs } from '../context/JobContext';
 
-const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setApplications, userProfile, onUpdateProfile, globalJobs = [], setGlobalJobs, goHome }) => {
+const EmployerDashboard = () => {
+  const navigate = useNavigate();
+  const { userProfile, logout, updateProfile: onUpdateProfile } = useAuth();
+  const { globalJobs, setGlobalJobs, applications, setApplications, fetchJobs } = useJobs();
   const [currentView, setCurrentView] = useState('dashboard');
   const myGigs = globalJobs.filter(job => job.postedByEmail === userProfile?.email);
   const [showPostModal, setShowPostModal] = useState(false);
@@ -122,17 +128,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     }
   };
 
-  const fetchJobs = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/api/jobs`);
-      if (response.ok) {
-        const jobs = await response.json();
-        if (setGlobalJobs) setGlobalJobs(jobs);
-      }
-    } catch (err) {
-      console.warn('Failed to refresh jobs after posting:', err);
-    }
-  };
+
 
   const [isPosting, setIsPosting] = useState(false);
   const [editingJob, setEditingJob] = useState(null);
@@ -323,8 +319,19 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
               <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.2rem' }}>Employer</p>
             </div>
           </div>
-          <button onClick={goHome} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '12px', color: 'white', fontWeight: '600' }} className="card-hover">
+          <button onClick={() => navigate('/')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '12px', color: 'white', fontWeight: '600' }} className="card-hover">
             Home
+          </button>
+          <button
+            onClick={() => {
+              logout();
+              navigate('/');
+            }}
+            style={{ padding: '0.75rem 1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', background: 'transparent', border: 'none', color: '#f87171', fontWeight: '600', cursor: 'pointer', borderRadius: '12px', transition: 'all 0.2s', width: '100%' }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = 'rgba(248, 113, 113, 0.1)'; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+          >
+            Sign Out
           </button>
         </div>
       </nav>
@@ -565,7 +572,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                   }} />
                   <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ marginTop: '1.5rem', width: '100%', borderRadius: '12px' }}>Edit Logo</button>
                   <button onClick={() => {
-                    setEditData({ name: userProfile?.name || '', businessType: userProfile?.businessType || '', address: userProfile?.address || '', about: userProfile?.about || '', website: userProfile?.website || '' });
+                    setEditData({ name: userProfile?.name || '', businessType: userProfile?.businessType || '', location: userProfile?.location || userProfile?.address || '', about: userProfile?.about || '', website: userProfile?.website || '' });
                     setIsEditing(true);
                   }} className="btn-primary" style={{ marginTop: '0.75rem', width: '100%', borderRadius: '12px' }}>Edit Profile</button>
                 </div>
@@ -585,7 +592,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                   <div style={{ display: 'flex', gap: '1.5rem', flexWrap: 'wrap' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
                       <MapPin size={20} color="var(--primary)" /> 
-                      <span style={{ color: 'white' }}>{userProfile?.address || '123 Business Rd'}</span>
+                      <span style={{ color: 'white' }}>{userProfile?.location || userProfile?.address || '123 Business Rd'}</span>
                     </div>
                     {userProfile?.website && (
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
@@ -615,7 +622,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         <input type="text" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} placeholder="Company Name" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
                         <input type="text" value={editData.businessType} onChange={e => setEditData({...editData, businessType: e.target.value})} placeholder="Business Type (e.g., Retail, Cafe)" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
-                        <input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} placeholder="Address / Location" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
+                        <input type="text" value={editData.location} onChange={e => setEditData({...editData, location: e.target.value})} placeholder="Address / Location" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
                         <input type="text" value={editData.website} onChange={e => setEditData({...editData, website: e.target.value})} placeholder="Website URL (Optional)" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
                         <textarea value={editData.about} onChange={e => setEditData({...editData, about: e.target.value})} placeholder="About the business..." rows={4} style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%', resize: 'vertical' }} />
                         
