@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail } from 'lucide-react';
+import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Star } from 'lucide-react';
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
 
@@ -13,6 +13,26 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState({});
   const fileInputRef = useRef(null);
+
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackTarget, setFeedbackTarget] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState('');
+
+  const submitFeedback = (e) => {
+    e.preventDefault();
+    if (setApplications && feedbackTarget) {
+      setApplications(prev => prev.map(a => 
+        ((a.id && a.id === feedbackTarget.id) || (a._id && a._id === feedbackTarget._id))
+          ? { ...a, employerRated: true }
+          : a
+      ));
+    }
+    setShowFeedbackModal(false);
+    setFeedbackTarget(null);
+    setRating(0);
+    setFeedbackText('');
+  };
   
   // Messaging overlay state
   const [activeChat, setActiveChat] = useState(null);
@@ -347,21 +367,28 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                               </div>
                               <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
                                  <button 
-                                   className={app.status === 'Accepted' ? "btn-secondary" : "btn-primary"} 
+                                   className={app.status === 'Completed' ? 'btn-primary' : app.status === 'Accepted' || app.employerRated ? "btn-secondary" : "btn-primary"} 
                                    style={{ 
                                      padding: '0.4rem 0.8rem', 
                                      fontSize: '0.85rem', 
                                      flex: 1, 
-                                     background: app.status === 'Accepted' ? 'rgba(16, 185, 129, 0.1)' : 'linear-gradient(135deg, #10b981, #059669)', 
-                                     border: app.status === 'Accepted' ? '1px solid #10b981' : 'none',
-                                     color: app.status === 'Accepted' ? '#10b981' : 'white',
+                                     background: app.status === 'Completed' && !app.employerRated ? '#fbbf24' : (app.status === 'Accepted' || app.employerRated) ? 'rgba(16, 185, 129, 0.1)' : 'linear-gradient(135deg, #10b981, #059669)', 
+                                     border: (app.status === 'Accepted' || app.employerRated) ? '1px solid #10b981' : 'none',
+                                     color: app.status === 'Completed' && !app.employerRated ? 'black' : (app.status === 'Accepted' || app.employerRated) ? '#10b981' : 'white',
                                      boxShadow: 'none',
-                                     cursor: app.status === 'Accepted' ? 'default' : 'pointer'
+                                     cursor: (app.status === 'Accepted' && app.status !== 'Completed') || app.employerRated ? 'default' : 'pointer'
                                    }} 
-                                   onClick={() => app.status !== 'Accepted' && handleAccept(app)}
-                                   disabled={app.status === 'Accepted'}
+                                   onClick={() => {
+                                     if (app.status === 'Completed' && !app.employerRated) {
+                                       setFeedbackTarget(app);
+                                       setShowFeedbackModal(true);
+                                     } else if (app.status !== 'Accepted' && app.status !== 'Completed' && !app.employerRated) {
+                                       handleAccept(app);
+                                     }
+                                   }}
+                                   disabled={(app.status === 'Accepted' && app.status !== 'Completed') || app.employerRated}
                                  >
-                                   {app.status === 'Accepted' ? 'Accepted' : 'Accept'}
+                                   {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate Student' : app.status === 'Accepted' ? 'Accepted' : 'Accept'}
                                  </button>
                                  <button 
                                    className="btn-secondary" 
@@ -750,6 +777,51 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
               <div style={{ marginTop: '2rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
                 After payment, your credits will be updated shortly by our team.
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+        
+        {showFeedbackModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 1100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid var(--primary)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+            >
+              <button onClick={() => setShowFeedbackModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}>
+                <X size={24} />
+              </button>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '0.5rem' }}>Rate Student</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Provide feedback for <strong>{feedbackTarget?.studentName}</strong></p>
+              
+              <form onSubmit={submitFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star 
+                      key={star} 
+                      size={36} 
+                      onClick={() => setRating(star)}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                      style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                      fill={star <= rating ? "#fbbf24" : "none"} 
+                      color={star <= rating ? "#fbbf24" : "var(--border-color)"}
+                    />
+                  ))}
+                </div>
+                <textarea 
+                  value={feedbackText} 
+                  onChange={e => setFeedbackText(e.target.value)} 
+                  placeholder="How was it working with this student? (Optional)" 
+                  rows={4} 
+                  style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%', resize: 'vertical' }} 
+                />
+                <button type="submit" className="btn-primary" disabled={rating === 0} style={{ padding: '1rem', fontSize: '1.05rem', opacity: rating === 0 ? 0.5 : 1, cursor: rating === 0 ? 'not-allowed' : 'pointer' }}>
+                  Submit Rating
+                </button>
+              </form>
             </motion.div>
           </motion.div>
         )}

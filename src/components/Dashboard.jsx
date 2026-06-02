@@ -1,10 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { TrendingUp, Clock, CheckCircle, ChevronRight, IndianRupee, Loader, Star, ArrowUpRight, MapPin } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TrendingUp, Clock, CheckCircle, ChevronRight, IndianRupee, Loader, Star, ArrowUpRight, MapPin, X } from 'lucide-react';
 
 const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [], applications = [], setApplications }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
+  const [feedbackTarget, setFeedbackTarget] = useState(null);
+  const [rating, setRating] = useState(0);
+  const [feedbackText, setFeedbackText] = useState('');
+
+  const submitFeedback = (e) => {
+    e.preventDefault();
+    if (setApplications && feedbackTarget) {
+      setApplications(prev => prev.map(a => 
+        (a.jobId === feedbackTarget.id && a.studentEmail === userProfile?.email)
+          ? { ...a, status: 'Rated' }
+          : a
+      ));
+    }
+    setShowFeedbackModal(false);
+    setFeedbackTarget(null);
+    setRating(0);
+    setFeedbackText('');
+  };
 
   const handleMarkAsDone = (e, jobId) => {
     e.stopPropagation();
@@ -192,6 +212,18 @@ const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [],
                       Mark as Done
                     </button>
                   )}
+                  {gig.status === 'Completed' && (
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFeedbackTarget(gig);
+                        setShowFeedbackModal(true);
+                      }}
+                      style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', background: '#fbbf24', border: 'none', borderRadius: '6px', color: 'black', cursor: 'pointer', fontWeight: 'bold' }}
+                    >
+                      Rate Employer
+                    </button>
+                  )}
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
                     <Clock size={12} /> Due: {gig.deadline}
                   </p>
@@ -223,6 +255,54 @@ const Dashboard = ({ onNavigate, appliedJobs = [], userProfile, globalJobs = [],
           <button className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>Take Assessment</button>
         </div>
       </div>
+
+      <AnimatePresence>
+        {showFeedbackModal && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid var(--primary)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+            >
+              <button onClick={() => setShowFeedbackModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}>
+                <X size={24} />
+              </button>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '0.5rem' }}>Rate Your Experience</h2>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>Provide feedback for <strong>{feedbackTarget?.company}</strong></p>
+              
+              <form onSubmit={submitFeedback} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star 
+                      key={star} 
+                      size={36} 
+                      onClick={() => setRating(star)}
+                      onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.2)' }}
+                      onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)' }}
+                      style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                      fill={star <= rating ? "#fbbf24" : "none"} 
+                      color={star <= rating ? "#fbbf24" : "var(--border-color)"}
+                    />
+                  ))}
+                </div>
+                <textarea 
+                  value={feedbackText} 
+                  onChange={e => setFeedbackText(e.target.value)} 
+                  placeholder="How was it working with this employer? (Optional)" 
+                  rows={4} 
+                  style={{ padding: '1rem', borderRadius: '12px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%', resize: 'vertical' }} 
+                />
+                <button type="submit" className="btn-primary" disabled={rating === 0} style={{ padding: '1rem', fontSize: '1.05rem', opacity: rating === 0 ? 0.5 : 1, cursor: rating === 0 ? 'not-allowed' : 'pointer' }}>
+                  Submit Rating
+                </button>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <style>{`
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .lucide-spin { animation: spin 1s linear infinite; }
