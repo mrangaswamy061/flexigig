@@ -3,9 +3,11 @@ import { motion } from 'framer-motion';
 import { Briefcase, ArrowRight, Users, MapPin, Zap, Shield, Star } from 'lucide-react';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 const Home = () => {
   const navigate = useNavigate();
+  const { isLoggedIn, userRole } = useAuth();
   const [stats, setStats] = useState({
     activeStudents: 0,
     gigsPosted: 0,
@@ -47,13 +49,23 @@ const Home = () => {
           <img src="/logo.png" alt="FlexiGig Logo" style={{ height: '45px', objectFit: 'contain' }} />
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
-          <button 
-            onClick={() => navigate('/login', { state: { role: null, isLogin: true } })} 
-            style={{ padding: '0.7rem 1.75rem', borderRadius: '12px', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--primary)', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s' }}
-            className="btn-primary card-hover"
-          >
-            Log In
-          </button>
+          {isLoggedIn ? (
+            <button 
+              onClick={() => navigate(userRole === 'employer' ? '/business/dashboard' : userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard')} 
+              style={{ padding: '0.7rem 1.75rem', borderRadius: '12px', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--primary)', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s' }}
+              className="btn-primary card-hover"
+            >
+              Dashboard
+            </button>
+          ) : (
+            <button 
+              onClick={() => navigate('/login', { state: { role: null, isLogin: true } })} 
+              style={{ padding: '0.7rem 1.75rem', borderRadius: '12px', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--primary)', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s' }}
+              className="btn-primary card-hover"
+            >
+              Log In
+            </button>
+          )}
         </div>
       </nav>
 
@@ -77,20 +89,32 @@ const Home = () => {
           </p>
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button 
-              onClick={() => navigate('/login', { state: { role: 'student', isLogin: true } })} 
-              className="btn-primary"
-              style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
-            >
-              Student Log In <ArrowRight size={22} />
-            </button>
-            <button 
-              onClick={() => navigate('/login', { state: { role: 'employer', isLogin: true } })} 
-              style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s' }}
-              className="card-hover"
-            >
-              Employer Log In <Users size={22} />
-            </button>
+            {isLoggedIn ? (
+              <button 
+                onClick={() => navigate(userRole === 'employer' ? '/business/dashboard' : userRole === 'admin' ? '/admin/dashboard' : '/user/dashboard')} 
+                className="btn-primary"
+                style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
+              >
+                Go to Dashboard <ArrowRight size={22} />
+              </button>
+            ) : (
+              <>
+                <button 
+                  onClick={() => navigate('/login', { state: { role: 'student', isLogin: true } })} 
+                  className="btn-primary"
+                  style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
+                >
+                  Student Log In <ArrowRight size={22} />
+                </button>
+                <button 
+                  onClick={() => navigate('/login', { state: { role: 'employer', isLogin: true } })} 
+                  style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s' }}
+                  className="card-hover"
+                >
+                  Employer Log In <Users size={22} />
+                </button>
+              </>
+            )}
           </div>
         </motion.div>
 
