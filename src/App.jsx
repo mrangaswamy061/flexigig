@@ -153,8 +153,6 @@ function App() {
           }
         }
       } catch (err) {
-        console.warn('Mock applications fallback', err);
-      } catch (err) {
         console.error("Backend fetch error:", err);
       }
     };
