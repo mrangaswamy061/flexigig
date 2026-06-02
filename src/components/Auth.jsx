@@ -2,10 +2,16 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Phone, Mail, UploadCloud, Lock, ArrowRight, Building, Building2, Briefcase, GraduationCap, ChevronLeft, MapPin } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
+import { useNavigate, useLocation } from 'react-router-dom';
 
-const Auth = ({ onLogin, goHome, initialConfig }) => {
-  const [isLogin, setIsLogin] = useState(initialConfig?.isLogin ?? true);
-  const [role, setRole] = useState(initialConfig?.role ?? null); // 'student', 'employer'
+const Auth = () => {
+  const { login } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const initialConfig = location.state || {};
+  const [isLogin, setIsLogin] = useState(initialConfig.isLogin ?? true);
+  const [role, setRole] = useState(initialConfig.role ?? null); // 'student', 'employer'
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -30,7 +36,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         if (!res.ok) throw new Error(data.error || 'Registration failed');
         if (data.token) localStorage.setItem('token', data.token);
         alert("Account created successfully!");
-        onLogin(data.user.role, false, data.user.name, email, data.user);
+        login(data.user.role, false, data.user.name, email, data.user);
       })
       .catch(err => {
         console.warn('Registration fetch failed:', err);
@@ -55,7 +61,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         const actualRole = data.user?.role || 'student';
         if (data.token) localStorage.setItem('token', data.token);
         
-        onLogin(actualRole, false, data.user?.name || email.split('@')[0], email, data.user);
+        login(actualRole, false, data.user?.name || email.split('@')[0], email, data.user);
       })
       .catch(err => {
         console.warn('Login fetch failed:', err);
@@ -63,7 +69,7 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
         if (isNetworkError) {
           console.log('Falling back to Offline Mock Login.');
           alert("⚠️ Server offline. Logged in successfully in Offline Mock Mode!");
-          onLogin('student', false, email.split('@')[0], email, { name: email.split('@')[0], email, role: 'student' });
+          login('student', false, email.split('@')[0], email, { name: email.split('@')[0], email, role: 'student' });
         } else {
           alert(err.message);
         }

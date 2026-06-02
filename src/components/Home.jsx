@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { Briefcase, ArrowRight, Users, MapPin, Zap, Shield, Star } from 'lucide-react';
 import { API_BASE_URL } from '../config';
+import { useNavigate } from 'react-router-dom';
 
-const Home = ({ onGoToLogin }) => {
+const Home = () => {
+  const navigate = useNavigate();
   const [stats, setStats] = useState({
     activeStudents: 0,
     gigsPosted: 0,
@@ -46,7 +48,7 @@ const Home = ({ onGoToLogin }) => {
         </div>
         <div style={{ display: 'flex', gap: '1rem' }}>
           <button 
-            onClick={() => onGoToLogin(null, true)} 
+            onClick={() => navigate('/login', { state: { role: null, isLogin: true } })} 
             style={{ padding: '0.7rem 1.75rem', borderRadius: '12px', background: 'rgba(212, 175, 55, 0.1)', border: '1px solid var(--primary)', color: 'white', fontWeight: '700', fontSize: '1rem', cursor: 'pointer', transition: 'all 0.3s' }}
             className="btn-primary card-hover"
           >
@@ -76,14 +78,14 @@ const Home = ({ onGoToLogin }) => {
 
           <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
             <button 
-              onClick={() => onGoToLogin('student', true)} 
+              onClick={() => navigate('/login', { state: { role: 'student', isLogin: true } })} 
               className="btn-primary"
               style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
             >
               Student Log In <ArrowRight size={22} />
             </button>
             <button 
-              onClick={() => onGoToLogin('employer', true)} 
+              onClick={() => navigate('/login', { state: { role: 'employer', isLogin: true } })} 
               style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s' }}
               className="card-hover"
             >
