@@ -161,15 +161,7 @@ const AdminDashboard = ({ goHome, globalJobs = [], setGlobalJobs, students = [],
         <AnimatePresence mode="wait">
           {/* OVERVIEW */}
           {tab === 'Overview' && (
-            <motion.div key="ov" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(380px, 1fr))', gap: '2rem' }}>
-              <div className="glass-panel" style={{ padding: '2rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <MapPin size={20} color="#FF8C42" /> Live Job Map
-                </h3>
-                <div style={{ height: '380px', borderRadius: '12px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                  <RealMap jobs={globalJobs} center={[28.6139, 77.2090]} userRole="admin" />
-                </div>
-              </div>
+            <motion.div key="ov" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '2rem' }}>
               <div className="glass-panel" style={{ padding: '2rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '800', marginBottom: '1.25rem' }}>Recent Activity</h3>
                 {recentActivities.map((a, i) => {
