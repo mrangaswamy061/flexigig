@@ -104,14 +104,14 @@ const Home = () => {
                   className="btn-primary"
                   style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
                 >
-                  Student Log In <ArrowRight size={22} />
+                  User Log In <ArrowRight size={22} />
                 </button>
                 <button 
                   onClick={() => navigate('/login', { state: { role: 'employer', isLogin: true } })} 
                   style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s' }}
                   className="card-hover"
                 >
-                  Employer Log In <Users size={22} />
+                  Business Owner Log In <Users size={22} />
                 </button>
               </>
             )}
