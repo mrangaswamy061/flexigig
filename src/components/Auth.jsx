@@ -63,7 +63,13 @@ const Auth = ({ onLogin, goHome, initialConfig }) => {
       .then(async res => {
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Login failed');
-        onLogin(role, false, data.user?.name || name, email, data.user);
+        
+        const actualRole = data.user?.role || role;
+        if (actualRole !== role) {
+          alert(`This account is registered as a ${actualRole}. Logging you into the ${actualRole} portal instead.`);
+        }
+        
+        onLogin(actualRole, false, data.user?.name || name, email, data.user);
       })
       .catch(err => {
         console.warn('Login fetch failed:', err);
