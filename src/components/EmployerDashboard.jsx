@@ -1,15 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail } from 'lucide-react';
 import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
 
-const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setApplications, userProfile, globalJobs = [], setGlobalJobs, goHome }) => {
+const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setApplications, userProfile, onUpdateProfile, globalJobs = [], setGlobalJobs, goHome }) => {
   const [currentView, setCurrentView] = useState('dashboard');
   const myGigs = globalJobs.filter(job => job.postedByEmail === userProfile?.email);
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editData, setEditData] = useState({});
+  const fileInputRef = useRef(null);
   
   // Messaging overlay state
   const [activeChat, setActiveChat] = useState(null);
@@ -481,8 +484,21 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                     backgroundSize: 'cover', backgroundPosition: 'center',
                     border: '6px solid rgba(139, 92, 246, 0.2)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.3)'
                   }} />
-                  <button className="btn-secondary" style={{ marginTop: '1.5rem', width: '100%', borderRadius: '12px' }}>Edit Logo</button>
-                  <button className="btn-primary" style={{ marginTop: '0.75rem', width: '100%', borderRadius: '12px' }}>Edit Profile</button>
+                  <input type="file" ref={fileInputRef} accept="image/*" style={{ display: 'none' }} onChange={(e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => {
+                        if (onUpdateProfile) onUpdateProfile({ profilePic: reader.result });
+                      };
+                      reader.readAsDataURL(file);
+                    }
+                  }} />
+                  <button onClick={() => fileInputRef.current?.click()} className="btn-secondary" style={{ marginTop: '1.5rem', width: '100%', borderRadius: '12px' }}>Edit Logo</button>
+                  <button onClick={() => {
+                    setEditData({ name: userProfile?.name || '', businessType: userProfile?.businessType || '', address: userProfile?.address || '', about: userProfile?.about || '', website: userProfile?.website || '' });
+                    setIsEditing(true);
+                  }} className="btn-primary" style={{ marginTop: '0.75rem', width: '100%', borderRadius: '12px' }}>Edit Profile</button>
                 </div>
                 
                 <div style={{ flex: '1 1 400px', display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -510,11 +526,42 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                     )}
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-muted)' }}>
                       <Mail size={20} color="var(--primary)" /> 
-                      <span style={{ color: 'white' }}>contact@business.com</span>
+                      <span style={{ color: 'white' }}>{userProfile?.email || 'contact@business.com'}</span>
                     </div>
                   </div>
                 </div>
               </div>
+              
+              <AnimatePresence>
+                {isEditing && (
+                  <motion.div 
+                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                    style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 1000, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+                  >
+                    <motion.div 
+                      initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                      className="glass-panel" style={{ width: '100%', maxWidth: '500px', padding: '2.5rem', position: 'relative', border: '1px solid var(--accent)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+                    >
+                      <h2 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '1.5rem' }}>Edit Company Profile</h2>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                        <input type="text" value={editData.name} onChange={e => setEditData({...editData, name: e.target.value})} placeholder="Company Name" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
+                        <input type="text" value={editData.businessType} onChange={e => setEditData({...editData, businessType: e.target.value})} placeholder="Business Type (e.g., Retail, Cafe)" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
+                        <input type="text" value={editData.address} onChange={e => setEditData({...editData, address: e.target.value})} placeholder="Address / Location" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
+                        <input type="text" value={editData.website} onChange={e => setEditData({...editData, website: e.target.value})} placeholder="Website URL (Optional)" style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%' }} />
+                        <textarea value={editData.about} onChange={e => setEditData({...editData, about: e.target.value})} placeholder="About the business..." rows={4} style={{ padding: '0.8rem', borderRadius: '8px', background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.1)', color: 'white', width: '100%', resize: 'vertical' }} />
+                        
+                        <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                          <button onClick={() => setIsEditing(false)} className="btn-secondary" style={{ flex: 1 }}>Cancel</button>
+                          <button onClick={() => {
+                            if (onUpdateProfile) onUpdateProfile(editData);
+                            setIsEditing(false);
+                          }} className="btn-primary" style={{ flex: 1 }}>Save Changes</button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           )}
         </AnimatePresence>

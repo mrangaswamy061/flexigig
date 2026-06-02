@@ -268,7 +268,18 @@ function App() {
           </motion.div>
         ) : userRole === 'employer' ? (
           <motion.div key="employer-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} setApplications={handleSetApplications} userProfile={{ name: userName, email: userEmail, ...userProfile }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
+            <EmployerDashboard onLogout={handleLogout} appliedJobs={appliedJobs} applications={applications} setApplications={handleSetApplications} userProfile={{ name: userName, email: userEmail, ...userProfile }} onUpdateProfile={async (data) => {
+              setUserProfile(prev => ({ ...prev, ...data }));
+              try {
+                await fetch(`${API_BASE_URL}/api/users/${userEmail}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data)
+                });
+              } catch (err) {
+                console.warn("Backend offline or error updating profile in DB:", err);
+              }
+            }} globalJobs={globalJobs} setGlobalJobs={setGlobalJobs} goHome={goHome} />
           </motion.div>
         ) : (
           <motion.div key="student-app" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
