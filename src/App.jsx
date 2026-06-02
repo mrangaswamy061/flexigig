@@ -21,6 +21,7 @@ function App() {
   const [userName, setUserName] = useState('Alex Johnson');
   const [userEmail, setUserEmail] = useState('');
   const [currentView, setCurrentView] = useState('dashboard');
+  const [isInitializingAuth, setIsInitializingAuth] = useState(true);
   
   // Dictionary state of applied jobs keyed by student email
   const [appliedJobsByEmail, setAppliedJobsByEmail] = useState(() => {
@@ -152,10 +153,40 @@ function App() {
           }
         }
       } catch (err) {
-        console.error("Backend not running or DB empty, using default frontend data.", err);
+        console.warn('Mock applications fallback', err);
+      } catch (err) {
+        console.error("Backend fetch error:", err);
       }
     };
+    
+    const initializeAuth = async () => {
+      const token = localStorage.getItem('token');
+      if (token) {
+        try {
+          const res = await fetch(`${API_BASE_URL}/api/auth/me`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+          });
+          if (res.ok) {
+            const data = await res.json();
+            const { role, name, email } = data.user;
+            setUserRole(role);
+            setUserName(name || email.split('@')[0]);
+            setUserEmail(email);
+            setUserProfile(data.user);
+            setIsLoggedIn(true);
+            setShowHome(false);
+          } else {
+            localStorage.removeItem('token');
+          }
+        } catch (e) {
+          console.warn('Failed to validate token', e);
+        }
+      }
+      setIsInitializingAuth(false);
+    };
+
     fetchBackendData();
+    initializeAuth();
   }, []);
 
   const handleLogin = (role, isNewUser, name, email, user = null) => {
@@ -170,6 +201,7 @@ function App() {
   };
 
   const handleLogout = () => {
+    localStorage.removeItem('token');
     setIsLoggedIn(false);
     setUserRole(null);
     setUserEmail('');
@@ -248,10 +280,18 @@ function App() {
     }
   };
 
+  if (isInitializingAuth) {
+    return (
+      <div style={{ minHeight: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', color: 'white' }}>
+        <div className="lucide-spin" style={{ width: '40px', height: '40px', border: '4px solid rgba(255,255,255,0.1)', borderTopColor: 'var(--primary)', borderRadius: '50%' }}></div>
+      </div>
+    );
+  }
+
   return (
     <div className="app-container" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
       <AnimatePresence mode="wait">
-        {showHome ? (
+        {showHome && !isLoggedIn ? (
           <Home key="home" onGoToLogin={(role = null, isLogin = true) => {
             setAuthConfig({ role, isLogin });
             setShowHome(false);

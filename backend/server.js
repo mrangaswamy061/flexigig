@@ -4,6 +4,9 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
+import authMiddleware from './middleware/authMiddleware.js';
 
 // Load environment variables early
 dotenv.config();
@@ -120,39 +123,65 @@ app.post('/api/auth/login', async (req, res) => {
     // Capture client IP for logging (fallback to request headers)
     const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.connection?.remoteAddress || '';
 
+    let user;
+    let actualRole = role;
+
+    // Check if the user is an admin based on environment variable (e.g. ADMIN_EMAILS="mrangaswamy061@gmail.com,admin@example.com")
+    const adminEmails = (process.env.ADMIN_EMAILS || 'mrangaswamy061@gmail.com,kirankumar63607@gmail.com').split(',').map(e => e.trim().toLowerCase());
+    const isAdmin = adminEmails.includes(email.toLowerCase());
+
     if (!isMongoConnected()) {
       console.log('⚠️ MongoDB not connected. Falling back to Mock Login.');
-      let user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
+      user = mockUsers.find(u => u.email.toLowerCase() === email.toLowerCase());
       if (!user) {
-        user = { id: 'user_' + Date.now(), name: email.split('@')[0], email, role: role || 'student', loginCount: 1, lastLogin: new Date() };
+        // Mock create
+        actualRole = isAdmin ? 'admin' : (role || 'student');
+        user = { id: 'user_' + Date.now(), name: email.split('@')[0], email, role: actualRole, loginCount: 1, lastLogin: new Date() };
         mockUsers.push(user);
       } else {
         user.loginCount = (user.loginCount || 0) + 1;
         user.lastLogin = new Date();
+        actualRole = isAdmin ? 'admin' : user.role;
       }
-      // Record mock login attempt
-      if (isMongoConnected()) {
-        await LoginLog.create({ email, ip: clientIp, success: true });
-      }
-      return res.json({ message: 'Login successful (Mock Mode)', user });
+      
+      const token = jwt.sign({ id: user.id, email: user.email, role: actualRole }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '7d' });
+      return res.json({ message: 'Login successful (Mock Mode)', user: { ...user, role: actualRole }, token });
     }
 
-    const user = await User.findOne({ email });
+    user = await User.findOne({ email });
     if (!user) {
-      // Log failed login attempt
+      if (isAdmin) {
+        // Auto-create admin if they don't exist yet but are in the ADMIN_EMAILS list
+        const hashedPassword = await bcrypt.hash(password, 10);
+        user = new User({ name: 'System Admin', email, password: hashedPassword, role: 'admin' });
+        await user.save();
+      } else {
+        await LoginLog.create({ email, ip: clientIp, success: false });
+        return res.status(401).json({ error: 'Account not found. Please register first.' });
+      }
+    }
+
+    // Verify Password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
       await LoginLog.create({ email, ip: clientIp, success: false });
-      return res.status(401).json({ error: 'Account not found. Please register first.' });
+      return res.status(401).json({ error: 'Invalid credentials.' });
     }
     
-    // Increment loginCount and update lastLogin
+    // Auto-escalate to admin if in ADMIN_EMAILS
+    if (isAdmin && user.role !== 'admin') {
+      user.role = 'admin';
+    }
+
     user.loginCount = (user.loginCount || 0) + 1;
     user.lastLogin = new Date();
     await user.save();
 
-    // Record successful login
     await LoginLog.create({ userId: user._id, email, ip: clientIp, success: true });
 
-    res.json({ message: 'Login successful', user });
+    const token = jwt.sign({ id: user._id, email: user.email, role: user.role }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '7d' });
+
+    res.json({ message: 'Login successful', user, token });
   } catch (err) {
     // Attempt to log error login attempt if possible
     try {
@@ -160,6 +189,17 @@ app.post('/api/auth/login', async (req, res) => {
       await LoginLog.create({ email: req.body?.email || 'unknown', ip: clientIp, success: false });
     } catch (_) {}
     res.status(500).json({ error: err.message });
+  }
+});
+
+// Verify token
+app.get('/api/auth/me', authMiddleware, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) return res.status(404).json({ error: 'User not found' });
+    res.json({ user });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
   }
 });
 
@@ -194,9 +234,17 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(403).json({ error: 'Permission Denied: A profile with this email or phone number already exists.' });
     }
 
-    const newUser = new User(req.body);
+    const hashedPassword = await bcrypt.hash(req.body.password, 10);
+    const newUser = new User({
+      ...req.body,
+      password: hashedPassword
+    });
+    
     await newUser.save();
-    res.status(201).json({ message: 'Profile created successfully', user: newUser });
+    
+    const token = jwt.sign({ id: newUser._id, email: newUser.email, role: newUser.role }, process.env.JWT_SECRET || 'fallback_secret', { expiresIn: '7d' });
+
+    res.status(201).json({ message: 'Profile created successfully', user: newUser, token });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -342,6 +390,19 @@ app.post('/api/jobs', async (req, res) => {
     const newJob = new Job(req.body);
     await newJob.save();
     res.status(201).json({ ...newJob.toObject(), id: newJob._id.toString() });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/jobs/:id', async (req, res) => {
+  try {
+    if (!isMongoConnected()) {
+      return res.json({ message: 'Job updated locally (Mock Mode)', job: { id: req.params.id, ...req.body } });
+    }
+    const updatedJob = await Job.findByIdAndUpdate(req.params.id, { $set: req.body }, { new: true });
+    if (!updatedJob) return res.status(404).json({ error: 'Job not found' });
+    res.json({ ...updatedJob.toObject(), id: updatedJob._id.toString() });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

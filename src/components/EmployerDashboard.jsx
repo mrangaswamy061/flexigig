@@ -135,6 +135,38 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
   };
 
   const [isPosting, setIsPosting] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
+
+  const handleEditJob = async (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const description = formData.get('description');
+    const updatedJob = {
+      ...editingJob,
+      pay: formData.get('pay'),
+      startTime: formData.get('startTime'),
+      endTime: formData.get('endTime'),
+      duration: `${formData.get('startTime')} to ${formData.get('endTime')}`,
+      description,
+      title: description.substring(0, 30) + (description.length > 30 ? '...' : '')
+    };
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/jobs/${editingJob.id || editingJob._id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(updatedJob)
+      });
+      if (response.ok) {
+        await fetchJobs();
+      } else {
+         if (setGlobalJobs) setGlobalJobs(prev => prev.map(j => j.id === editingJob.id ? updatedJob : j));
+      }
+    } catch (err) {
+      if (setGlobalJobs) setGlobalJobs(prev => prev.map(j => j.id === editingJob.id ? updatedJob : j));
+    }
+    setEditingJob(null);
+  };
 
   const handlePostJob = async (e) => {
     e.preventDefault();
@@ -142,10 +174,11 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     setIsPosting(true);
     
     const formData = new FormData(e.target);
-    const title = formData.get('title');
-    const location = formData.get('location');
+    const description = formData.get('description');
+    const title = description.substring(0, 30) + (description.length > 30 ? '...' : '');
 
     let latlng = null;
+    let locationString = 'Local Area';
 
     // 1. Try Browser GPS first (Most accurate)
     const gps = await new Promise((resolve) => {
@@ -161,17 +194,17 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
       latlng = gps;
     }
 
-    // 2. Try Geocoding
-    if (!latlng) {
+    if (latlng) {
+      // Reverse Geocode
       try {
-        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(location)}&limit=1`);
+        const res = await fetch(`https://photon.komoot.io/reverse?lon=${latlng[1]}&lat=${latlng[0]}`);
         const data = await res.json();
         if (data && data.features && data.features.length > 0) {
-          const coords = data.features[0].geometry.coordinates; // [lon, lat]
-          latlng = [parseFloat(coords[1]), parseFloat(coords[0])];
+          const props = data.features[0].properties;
+          locationString = [props.name, props.city, props.state].filter(Boolean).join(', ');
         }
       } catch (err) {
-        console.error("Geocoding failed:", err);
+        console.error("Reverse geocoding failed:", err);
       }
     }
 
@@ -192,15 +225,16 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
 
     const newJob = {
       title,
-      dept: formData.get('dept'),
-      distance: parseFloat(formData.get('distance')) || 1.0,
-      location,
+      description,
+      dept: userProfile?.name || 'Local Business',
+      location: locationString,
       pay: formData.get('pay') || '₹300/hr',
-      duration: formData.get('duration'),
-      skillLevel: formData.get('skillLevel'),
+      startTime: formData.get('startTime'),
+      endTime: formData.get('endTime'),
+      duration: `${formData.get('startTime')} to ${formData.get('endTime')}`,
       employerType: 'Local Business',
       type: 'In Person',
-      tags: [title.split(' ')[0]],
+      tags: [],
       latlng,
       coordinates: { x: Math.floor(Math.random() * 70) + 15, y: Math.floor(Math.random() * 70) + 15 },
       postedByEmail: userProfile?.email || 'employer@example.com'
@@ -441,7 +475,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                     >
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
                         <div>
-                          <h3 style={{ fontSize: '1.35rem', fontWeight: '700', marginBottom: '0.4rem' }}>Job Available: {job.title}</h3>
+                          <h3 style={{ fontSize: '1.35rem', fontWeight: '700', marginBottom: '0.4rem' }}>{job.title}</h3>
                           <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: 'var(--text-muted)', fontSize: '1.05rem', fontWeight: '600' }}>
                             <Building2 size={18} /> Business: {job.dept}
                           </div>
@@ -464,6 +498,15 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                             Inactive
                           </button>
                         </div>
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
+                        <button 
+                          onClick={() => setEditingJob(job)}
+                          style={{ background: 'rgba(255,255,255,0.1)', color: 'white', padding: '0.35rem 0.85rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: '700', border: 'none', cursor: 'pointer', transition: 'all 0.2s' }}
+                        >
+                          Edit Details
+                        </button>
                       </div>
 
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', marginBottom: '1.5rem', background: 'rgba(0,0,0,0.2)', padding: '1rem', borderRadius: '12px' }}>
@@ -611,25 +654,69 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
               <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Hire students directly from the campus network.</p>
               
               <form onSubmit={handlePostJob} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-                <input name="title" type="text" placeholder="Gig Title (e.g., Warehouse Assistant)" required className="modal-input" />
-                <input name="dept" type="text" placeholder="Your Business Name" required className="modal-input" defaultValue={userProfile?.name} />
+                <textarea name="description" placeholder="Gig Details & Description (e.g., Looking for a warehouse assistant to move boxes...)" required className="modal-input" rows={4} style={{ resize: 'vertical' }} />
                 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.25rem' }}>
-                  <input name="pay" type="text" placeholder="Pay (e.g., ₹400/hr)" required className="modal-input" />
-                  <input name="duration" type="text" placeholder="Duration (e.g., 5 hrs)" required className="modal-input" />
-                  <input name="distance" type="number" step="0.1" min="0" placeholder="Distance to Campus (km)" required className="modal-input" />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                  <input name="pay" type="text" placeholder="Job Amount / Payment (e.g., ₹500 total or ₹200/hr)" required className="modal-input" />
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '1.25rem' }}>
-                  <input name="location" type="text" placeholder="Full Address" required className="modal-input" defaultValue={userProfile?.address} />
-                  <select name="skillLevel" required className="modal-input" style={{ appearance: 'none', cursor: 'pointer' }} defaultValue="Unskilled">
-                    <option value="Unskilled">Unskilled (No Exp.)</option>
-                    <option value="Skilled">Skilled (Requires Exp.)</option>
-                  </select>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.25rem', display: 'block' }}>Start Time</label>
+                    <input name="startTime" type="datetime-local" required className="modal-input" />
+                  </div>
+                  <div>
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.25rem', display: 'block' }}>End Time</label>
+                    <input name="endTime" type="datetime-local" required className="modal-input" />
+                  </div>
                 </div>
                 
                 <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                   <button type="button" onClick={() => setShowPostModal(false)} className="btn-secondary">Cancel</button>
-                  <button type="submit" disabled={isPosting} className="btn-primary" style={{ background: isPosting ? '#6b7280' : 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem', cursor: isPosting ? 'not-allowed' : 'pointer' }}>{isPosting ? 'Publishing...' : 'Publish Gig'}</button>
+                  <button type="submit" disabled={isPosting} className="btn-primary" style={{ background: isPosting ? '#6b7280' : 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem', cursor: isPosting ? 'not-allowed' : 'pointer' }}>
+                    {isPosting ? 'Publishing & Fetching Location...' : 'Publish Gig'}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+        
+        {editingJob && (
+          <motion.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(10px)', zIndex: 100, display: 'flex', justifyContent: 'center', alignItems: 'center', padding: '1rem' }}
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+              className="glass-panel" style={{ width: '100%', maxWidth: '600px', padding: '2.5rem', position: 'relative', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)' }}
+            >
+              <button onClick={() => setEditingJob(null)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', background: 'transparent', color: 'var(--text-muted)', cursor: 'pointer', border: 'none' }}>
+                <X size={28} />
+              </button>
+              <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '0.5rem' }}>Edit Gig</h2>
+              
+              <form onSubmit={handleEditJob} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                <textarea name="description" defaultValue={editingJob.description || editingJob.title} placeholder="Gig Details & Description" required className="modal-input" rows={4} style={{ resize: 'vertical' }} />
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '1.25rem' }}>
+                  <input name="pay" type="text" defaultValue={editingJob.pay} placeholder="Job Amount / Payment" required className="modal-input" />
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                  <div>
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.25rem', display: 'block' }}>Start Time</label>
+                    <input name="startTime" defaultValue={editingJob.startTime} type="datetime-local" required className="modal-input" />
+                  </div>
+                  <div>
+                    <label style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.25rem', display: 'block' }}>End Time</label>
+                    <input name="endTime" defaultValue={editingJob.endTime} type="datetime-local" required className="modal-input" />
+                  </div>
+                </div>
+                
+                <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setEditingJob(null)} className="btn-secondary">Cancel</button>
+                  <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem' }}>
+                    Save Changes
+                  </button>
                 </div>
               </form>
             </motion.div>
