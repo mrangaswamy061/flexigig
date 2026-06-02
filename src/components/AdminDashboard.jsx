@@ -35,10 +35,38 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const { logout } = useAuth();
   const { globalJobs, setGlobalJobs, applications, setApplications } = useJobs();
-  const students = []; // We can fetch students later or keep mock
-  const employers = []; // Same for employers
+  const [students, setStudents] = useState([]);
+  const [employers, setEmployers] = useState([]);
   const [tab, setTab] = useState('Overview');
   const [search, setSearch] = useState('');
+
+  React.useEffect(() => {
+    fetch(`${API_BASE_URL}/api/users`)
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          const mappedStudents = data.filter(u => u.role === 'student').map(u => ({
+            id: u._id,
+            name: u.name || u.email.split('@')[0],
+            college: u.location || 'Local User',
+            major: u.contact || 'No contact',
+            status: u.status || 'Active',
+            appliedJobs: applications.filter(a => a.studentId === u._id || a.studentEmail === u.email).map(a => a.jobId)
+          }));
+          const mappedEmployers = data.filter(u => u.role === 'employer').map(u => ({
+            id: u._id,
+            name: u.name || u.email.split('@')[0],
+            type: u.businessType || 'Business',
+            status: u.status || 'Active',
+            postedJobs: globalJobs.filter(j => j.postedByEmail === u.email).map(j => j.id),
+            totalHired: applications.filter(a => a.status === 'Hired' && globalJobs.some(j => j.id === a.jobId && j.postedByEmail === u.email)).length
+          }));
+          setStudents(mappedStudents);
+          setEmployers(mappedEmployers);
+        }
+      })
+      .catch(err => console.warn('Failed to fetch users:', err));
+  }, [globalJobs, applications]);
 
   // Dynamically generate recent activity from actual data
   const recentActivities = [];
@@ -49,7 +77,7 @@ const AdminDashboard = () => {
     recentActivities.push({
       icon: FileText,
       color: '#10b981',
-      title: `${app.studentName || 'Student'} applied`,
+      title: `${app.studentName || 'User'} applied`,
       sub: `${job ? job.title : 'a gig'} @ ${job ? job.dept : 'Business'}`,
       time: app.appliedAt || 'Just now',
       timestamp: app.createdAt ? new Date(app.createdAt).getTime() : Date.now() - 600000
@@ -61,19 +89,19 @@ const AdminDashboard = () => {
     recentActivities.push({
       icon: Building2,
       color: '#8b5cf6',
-      title: `${job.dept || 'Employer'} posted a new gig`,
+      title: `${job.dept || 'Business Owner'} posted a new gig`,
       sub: `${job.title} • ${job.pay}`,
       time: 'New gig',
       timestamp: job.createdAt ? new Date(job.createdAt).getTime() : Date.now() - 1200000
     });
   });
 
-  // Add students who have logged in or are active
+  // Add users who have logged in or are active
   students.slice(-2).forEach(s => {
     recentActivities.push({
       icon: GraduationCap,
       color: '#3b82f6',
-      title: `${s.name} joined as Student`,
+      title: `${s.name} joined as User`,
       sub: `${s.college} • ${s.major}`,
       time: 'Active',
       timestamp: Date.now() - 1800000
@@ -108,7 +136,7 @@ const AdminDashboard = () => {
     }
   };
 
-  const tabs = ['Overview', 'Students', 'Employers', 'Jobs & Applications'];
+  const tabs = ['Overview', 'Users', 'Business Owners', 'Jobs & Applications'];
 
   const filteredStudents = students.filter(s =>
     s.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -153,7 +181,7 @@ const AdminDashboard = () => {
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
           <div style={{ flex: 1, display: 'flex', alignItems: 'center', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', padding: '0.75rem 1.25rem', border: '1px solid rgba(255,255,255,0.1)' }}>
             <Search size={18} color="var(--text-muted)" style={{ marginRight: '0.75rem' }} />
-            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search students, employers, jobs..." style={{ background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontFamily: 'inherit', fontSize: '1rem' }} />
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search users, business owners, jobs..." style={{ background: 'transparent', border: 'none', color: 'white', width: '100%', outline: 'none', fontFamily: 'inherit', fontSize: '1rem' }} />
           </div>
           <button style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', padding: '0 1.25rem', borderRadius: '12px', color: 'white', fontWeight: '600', cursor: 'pointer' }}>
             <Filter size={18} /> Filter
@@ -162,8 +190,8 @@ const AdminDashboard = () => {
 
         {/* Stats */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '2rem' }}>
-          <StatCard label="Total Students" value={students.length} icon={GraduationCap} color="#3b82f6" trend="+12% this month" />
-          <StatCard label="Employers" value={employers.length} icon={Building2} color="#8b5cf6" trend="+5% this month" />
+          <StatCard label="Total Users" value={students.length} icon={GraduationCap} color="#3b82f6" trend="+12% this month" />
+          <StatCard label="Total Business Owners" value={employers.length} icon={Building2} color="#8b5cf6" trend="+5% this month" />
           <StatCard label="Active Gigs" value={globalJobs.length} icon={CheckCircle} color="#10b981" trend="+18% this week" />
           <StatCard label="Total Applications" value={applications.length} icon={FileText} color="#f97316" trend="+24% this week" />
         </div>
@@ -200,8 +228,8 @@ const AdminDashboard = () => {
             </motion.div>
           )}
 
-          {/* STUDENTS */}
-          {tab === 'Students' && (
+          {/* USERS */}
+          {tab === 'Users' && (
             <motion.div key="st" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
                 {filteredStudents.map(s => {
@@ -263,8 +291,8 @@ const AdminDashboard = () => {
             </motion.div>
           )}
 
-          {/* EMPLOYERS */}
-          {tab === 'Employers' && (
+          {/* BUSINESS OWNERS */}
+          {tab === 'Business Owners' && (
             <motion.div key="em" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
                 {filteredEmployers.map(e => {

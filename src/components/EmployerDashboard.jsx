@@ -286,7 +286,7 @@ const EmployerDashboard = () => {
       <nav className="glass-panel" style={{ margin: '1.5rem 2rem', padding: '1rem 2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
           <img src="/logo.png" alt="FlexiGig Logo" style={{ height: '40px', objectFit: 'contain' }} />
-          <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '0.75rem' }}>Employer</span>
+          <span style={{ fontSize: '1.1rem', color: 'var(--text-muted)', fontWeight: '600', borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '0.75rem' }}>Business Owner</span>
         </div>
 
         <div style={{ display: 'flex', gap: '0.5rem', background: 'rgba(255,255,255,0.02)', padding: '0.35rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
@@ -316,7 +316,7 @@ const EmployerDashboard = () => {
             <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-dark)', backgroundImage: userProfile?.profilePic ? `url(${userProfile.profilePic})` : 'none', backgroundSize: 'cover', backgroundPosition: 'center' }} />
             <div style={{ paddingRight: '0.75rem' }}>
               <p style={{ fontSize: '0.9rem', fontWeight: '600', lineHeight: '1' }}>{userProfile?.name?.split(' ')[0] || 'Business'}</p>
-              <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.2rem' }}>Employer</p>
+              <p style={{ fontSize: '0.75rem', color: 'var(--accent)', marginTop: '0.2rem' }}>Business Owner</p>
             </div>
           </div>
           <button onClick={() => navigate('/')} style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.1)', padding: '0.5rem 1rem', borderRadius: '12px', color: 'white', fontWeight: '600' }} className="card-hover">
@@ -428,7 +428,7 @@ const EmployerDashboard = () => {
                                    }}
                                    disabled={(app.status === 'Accepted' && app.status !== 'Completed') || app.employerRated}
                                  >
-                                   {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate Student' : app.status === 'Accepted' ? 'Accepted' : 'Accept'}
+                                   {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate User' : app.status === 'Accepted' ? 'Accepted' : 'Accept'}
                                  </button>
                                  <button 
                                    className="btn-secondary" 
@@ -471,7 +471,7 @@ const EmployerDashboard = () => {
                   <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '4rem', background: 'rgba(255,255,255,0.02)', borderRadius: '20px', border: '1px dashed rgba(255,255,255,0.1)' }}>
                     <Briefcase size={48} color="var(--text-muted)" style={{ margin: '0 auto 1rem', opacity: 0.5 }} />
                     <h3 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '0.5rem' }}>No Gigs Posted Yet</h3>
-                    <p style={{ color: 'var(--text-muted)' }}>Click the "Post New Gig" button to hire students.</p>
+                    <p style={{ color: 'var(--text-muted)' }}>Click the "Post New Gig" button to hire users.</p>
                   </div>
                 ) : (
                   myGigs.map((job, index) => (
@@ -585,7 +585,7 @@ const EmployerDashboard = () => {
                   
                   <div style={{ background: 'rgba(255,255,255,0.03)', padding: '1.5rem', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.05)' }}>
                     <p style={{ color: 'var(--text-main)', fontSize: '1.05rem', lineHeight: '1.7' }}>
-                      {userProfile?.about || "We are a local business looking to hire highly motivated students from the campus. We provide flexible hours, competitive pay, and a great working environment!"}
+                      {userProfile?.about || "We are a local business looking to hire highly motivated users from the campus. We provide flexible hours, competitive pay, and a great working environment!"}
                     </p>
                   </div>
 
@@ -657,7 +657,7 @@ const EmployerDashboard = () => {
                 <X size={28} />
               </button>
               <h2 style={{ fontSize: '2rem', fontWeight: '800', marginBottom: '0.5rem' }}>Post a New Gig</h2>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Hire students directly from the campus network.</p>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Hire users directly from the campus network.</p>
               
               <form onSubmit={handlePostJob} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                 <textarea name="description" placeholder="Gig Details & Description (e.g., Looking for a warehouse assistant to move boxes...)" required className="modal-input" rows={4} style={{ resize: 'vertical' }} />

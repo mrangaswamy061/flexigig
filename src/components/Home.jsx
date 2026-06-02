@@ -124,9 +124,9 @@ const Home = () => {
           style={{ display: 'flex', gap: '3rem', marginTop: '4rem', flexWrap: 'wrap', justifyContent: 'center' }}
         >
           {[
-            { value: stats.activeStudents, label: 'Active Students' },
+            { value: stats.activeStudents, label: 'Active Users' },
             { value: stats.gigsPosted, label: 'Gigs Posted' },
-            { value: stats.earnedByStudents > 0 ? `₹${stats.earnedByStudents}` : '₹0', label: 'Earned by Students' },
+            { value: stats.earnedByStudents > 0 ? `₹${stats.earnedByStudents}` : '₹0', label: 'Earned by Users' },
             { value: `${stats.avgRating}★`, label: 'Avg Rating' }
           ].map((stat, i) => (
             <div key={i} style={{ textAlign: 'center' }}>
@@ -144,7 +144,7 @@ const Home = () => {
           {[
             { icon: MapPin, title: 'Nearby Gigs', desc: 'Discover opportunities within walking distance of campus with our live radar map.', color: 'var(--primary)' },
             { icon: Zap, title: '1-Click Apply', desc: 'Apply to any gig instantly. No cover letters, no hassle — just tap and go.', color: 'var(--accent)' },
-            { icon: Shield, title: 'Verified & Safe', desc: 'All employers are verified. Your student data is encrypted and secure.', color: '#fbbf24' }
+            { icon: Shield, title: 'Verified & Safe', desc: 'All business owners are verified. Your data is encrypted and secure.', color: '#fbbf24' }
           ].map((feat, i) => {
             const Icon = feat.icon;
             return (
@@ -163,7 +163,7 @@ const Home = () => {
       {/* Footer */}
       <footer style={{ padding: '2rem 3rem', borderTop: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 10 }}>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>© 2026 FlexiGig. All rights reserved.</p>
-        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Built for students, by students.</p>
+        <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Built for users, by users.</p>
       </footer>
     </motion.div>
   );

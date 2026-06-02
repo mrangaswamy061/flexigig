@@ -220,7 +220,7 @@ app.post('/api/auth/register', async (req, res) => {
       if (existingUser) {
         return res.status(403).json({ error: 'Permission Denied: A profile with this email already exists.' });
       }
-      const newUser = { id: 'user_' + Date.now(), name, email, role, contact };
+      const newUser = { id: 'user_' + Date.now(), name, email, role, contact, loginCount: 1, lastLogin: new Date() };
       mockUsers.push(newUser);
       return res.status(201).json({ message: 'Profile created successfully (Mock Mode)', user: newUser });
     }
@@ -237,7 +237,9 @@ app.post('/api/auth/register', async (req, res) => {
     const hashedPassword = await bcrypt.hash(req.body.password, 10);
     const newUser = new User({
       ...req.body,
-      password: hashedPassword
+      password: hashedPassword,
+      loginCount: 1,
+      lastLogin: new Date()
     });
     
     await newUser.save();
@@ -494,7 +496,7 @@ app.post('/api/applications/accept', async (req, res) => {
 app.get('/api/stats', async (req, res) => {
   try {
     if (!isMongoConnected()) {
-      const studentCount = mockUsers.filter(u => u.role === 'student' && u.loginCount > 0).length;
+      const studentCount = mockUsers.filter(u => u.role === 'student').length;
       const jobCount = mockJobs.length;
       const totalEarnings = mockUsers
         .filter(u => u.role === 'student')
@@ -522,8 +524,7 @@ app.get('/api/stats', async (req, res) => {
       });
     }
 
-    // Only count students who have logged in at least once
-    const studentCount = await User.countDocuments({ role: 'student', loginCount: { $gt: 0 } });
+    const studentCount = await User.countDocuments({ role: 'student' });
     const jobCount = await Job.countDocuments();
     
     const earningsAgg = await User.aggregate([

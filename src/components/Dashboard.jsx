@@ -116,7 +116,7 @@ const Dashboard = () => {
             initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.1 }}
             style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(249, 115, 22, 0.1)', color: 'var(--primary)', padding: '0.25rem 0.75rem', borderRadius: '99px', fontSize: '0.85rem', fontWeight: '600', marginBottom: '1rem' }}
           >
-            <Star size={14} fill="currentColor" /> Top Rated Student
+            <Star size={14} fill="currentColor" /> Top Rated User
           </motion.div>
           <h2 style={{ fontSize: '3rem', fontWeight: '800', marginBottom: '0.5rem', letterSpacing: '-1px', background: 'linear-gradient(to right, #fff, #a1a1aa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
             Welcome back, {data.studentName}!
@@ -126,7 +126,7 @@ const Dashboard = () => {
             <MapPin size={18} color="var(--primary)" /> Based in: <span style={{ color: '#e4e4e7' }}>{data.studentLocation}</span>
           </div>
         </div>
-        <button className="btn-primary" onClick={() => onNavigate('jobs')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        <button className="btn-primary" onClick={() => navigate('/user/jobs')} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           Find New Gigs <ArrowUpRight size={20} />
         </button>
       </div>
@@ -167,7 +167,7 @@ const Dashboard = () => {
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
             <h3 style={{ fontSize: '1.5rem', fontWeight: '700' }}>Current Gigs</h3>
             <button 
-              onClick={() => onNavigate('jobs')} 
+              onClick={() => navigate('/user/jobs')} 
               style={{ color: 'var(--primary)', background: 'transparent', border: 'none', display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}
             >
               View All <ChevronRight size={18} />
@@ -228,7 +228,7 @@ const Dashboard = () => {
                       }}
                       style={{ fontSize: '0.8rem', padding: '0.3rem 0.8rem', background: '#fbbf24', border: 'none', borderRadius: '6px', color: 'black', cursor: 'pointer', fontWeight: 'bold' }}
                     >
-                      Rate Employer
+                      Rate Business Owner
                     </button>
                   )}
                   <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '0.25rem' }}>
