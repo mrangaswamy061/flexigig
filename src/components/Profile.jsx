@@ -22,6 +22,8 @@ const Profile = ({ userData, onUpdateProfile }) => {
           name: userData?.name || data.name,
           major: userData?.major || data.major,
           profilePic: userData?.profilePic || data.profilePic || null,
+          contact: userData?.contact || data.contact,
+          location: userData?.location || data.location,
         };
         setProfile(mergedProfile);
         setLoading(false);
@@ -33,15 +35,11 @@ const Profile = ({ userData, onUpdateProfile }) => {
           name: userData?.name || 'Alex Johnson',
           major: userData?.major || 'Computer Science, Jr.',
           location: userData?.location || 'North Campus Dorms, Block B',
+          contact: userData?.contact || '123-456-7890',
           rating: 4.9,
           reviewsCount: 24,
           about: userData?.about || "Passionate computer science student looking for frontend development and IT support gigs.",
           profilePic: userData?.profilePic || null,
-          education: {
-            degree: userData?.major || 'B.S. Computer Science',
-            university: 'State University',
-            period: userData?.gradYear ? `Expected Graduation: ${userData.gradYear}` : '2024 - 2028'
-          },
           skills: userData?.skills?.length ? userData.skills.map(s => ({ name: s, endorsements: 0 })) : [
             { name: 'React.js', endorsements: 18 }
           ],
@@ -236,12 +234,13 @@ const Profile = ({ userData, onUpdateProfile }) => {
 
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--text-main)' }}>
-            <div style={{ padding: '0.5rem', background: 'rgba(212, 175, 55, 0.1)', borderRadius: '8px', color: 'var(--primary)' }}><BookOpen size={20} /></div> Education
+            <div style={{ padding: '0.5rem', background: 'rgba(212, 175, 55, 0.1)', borderRadius: '8px', color: 'var(--primary)' }}><User size={20} /></div> Contact Info
           </h3>
           <div style={{ borderLeft: '2px solid rgba(212, 175, 55, 0.3)', paddingLeft: '1.5rem', marginLeft: '0.75rem' }}>
-            <h4 style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.25rem' }}>{profile.education.degree}</h4>
-            <p style={{ color: '#e4e4e7', fontSize: '1rem', fontWeight: '500' }}>{profile.education.university}</p>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '0.5rem' }}>{profile.education.period}</p>
+            <h4 style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--primary)' }}>Phone</h4>
+            <p style={{ color: '#e4e4e7', fontSize: '1rem', fontWeight: '500', marginBottom: '1.25rem' }}>{profile.contact || 'Not provided'}</p>
+            <h4 style={{ fontWeight: '700', fontSize: '1.1rem', marginBottom: '0.25rem', color: 'var(--primary)' }}>Address</h4>
+            <p style={{ color: '#e4e4e7', fontSize: '1rem', fontWeight: '500' }}>{profile.location || 'Not provided'}</p>
           </div>
         </div>
       </div>
