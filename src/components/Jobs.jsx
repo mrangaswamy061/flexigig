@@ -133,12 +133,13 @@ const Jobs = ({ userProfile, appliedJobs, setAppliedJobs, globalJobs, applicatio
     const timer = setTimeout(() => {
       const geocodeStudentLocation = async () => {
         try {
-          const res = await fetch('https://nominatim.openstreetmap.org/search?format=json&q=' + encodeURIComponent(studentLocation));
+          const res = await fetch('https://photon.komoot.io/api/?q=' + encodeURIComponent(studentLocation) + '&limit=1');
           if (res.ok) {
             const data = await res.json();
-            if (data && data.length > 0) {
-              const lat = parseFloat(data[0].lat);
-              const lon = parseFloat(data[0].lon);
+            if (data && data.features && data.features.length > 0) {
+              const coords = data.features[0].geometry.coordinates;
+              const lat = parseFloat(coords[1]);
+              const lon = parseFloat(coords[0]);
               if (!isNaN(lat) && !isNaN(lon)) {
                 console.log('📍 Profile address geocoded (delayed)', lat, lon);
                 // Only set if mapCenter hasn't been set by a more accurate method

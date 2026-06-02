@@ -111,8 +111,13 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     }
   };
 
+  const [isPosting, setIsPosting] = useState(false);
+
   const handlePostJob = async (e) => {
     e.preventDefault();
+    if (isPosting) return;
+    setIsPosting(true);
+    
     const formData = new FormData(e.target);
     const title = formData.get('title');
     const location = formData.get('location');
@@ -133,13 +138,14 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
       latlng = gps;
     }
 
-    // 2. Try Nominatim Geocoding
+    // 2. Try Geocoding
     if (!latlng) {
       try {
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`);
+        const res = await fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(location)}&limit=1`);
         const data = await res.json();
-        if (data && data.length > 0) {
-          latlng = [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+        if (data && data.features && data.features.length > 0) {
+          const coords = data.features[0].geometry.coordinates; // [lon, lat]
+          latlng = [parseFloat(coords[1]), parseFloat(coords[0])];
         }
       } catch (err) {
         console.error("Geocoding failed:", err);
@@ -214,6 +220,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
     }
 
     setShowPostModal(false);
+    setIsPosting(false);
     e.target.reset();
   };
 
@@ -548,7 +555,7 @@ const EmployerDashboard = ({ onLogout, appliedJobs = [], applications = [], setA
                 
                 <div style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
                   <button type="button" onClick={() => setShowPostModal(false)} className="btn-secondary">Cancel</button>
-                  <button type="submit" className="btn-primary" style={{ background: 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem' }}>Publish Gig</button>
+                  <button type="submit" disabled={isPosting} className="btn-primary" style={{ background: isPosting ? '#6b7280' : 'linear-gradient(135deg, var(--accent), #4c1d95)', padding: '0.8rem 2rem', cursor: isPosting ? 'not-allowed' : 'pointer' }}>{isPosting ? 'Publishing...' : 'Publish Gig'}</button>
                 </div>
               </form>
             </motion.div>
