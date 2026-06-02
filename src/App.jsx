@@ -43,7 +43,7 @@ function App() {
       <AnimatePresence mode="wait">
         <Routes>
           {/* Public Routes */}
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={!isLoggedIn ? <Navigate to="/login" /> : <Home />} />
           <Route path="/login" element={!isLoggedIn ? <Auth /> : <Navigate to={userRole === 'employer' ? "/business/dashboard" : userRole === 'admin' ? "/admin/dashboard" : "/user/dashboard"} />} />
 
           {/* User Protected Routes */}
