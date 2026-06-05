@@ -239,28 +239,6 @@ const Dashboard = () => {
             ))}
           </div>
         </div>
-
-        <div className="glass-panel card-hover" style={{ padding: '2.5rem', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', textAlign: 'center', flex: '1 1 300px', background: 'linear-gradient(180deg, rgba(20, 20, 20, 0.7) 0%, rgba(16, 185, 129, 0.05) 100%)' }}>
-          <div style={{ 
-            width: '90px', 
-            height: '90px', 
-            borderRadius: '50%', 
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05))',
-            border: '1px solid rgba(16, 185, 129, 0.3)',
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-            marginBottom: '1.5rem',
-            boxShadow: '0 0 30px rgba(16, 185, 129, 0.2)'
-          }}>
-            <TrendingUp size={36} color="#10b981" />
-          </div>
-          <h3 style={{ fontSize: '1.5rem', fontWeight: '700', marginBottom: '0.75rem' }}>Boost Your Profile</h3>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1rem', marginBottom: '2rem', lineHeight: '1.6' }}>
-            Complete your skill assessments to unlock premium campus gigs and earn up to 30% more.
-          </p>
-          <button className="btn-primary" style={{ width: '100%', background: 'linear-gradient(135deg, #10b981, #059669)', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)' }}>Take Assessment</button>
-        </div>
       </div>
 
       <AnimatePresence>

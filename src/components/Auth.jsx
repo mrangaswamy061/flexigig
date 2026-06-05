@@ -158,7 +158,7 @@ const AuthForm = ({ tab, mode, setMode, onSuccess }) => {
       <div style={{ marginBottom: '1.75rem' }}>
         <h2 style={{ fontSize: '1.9rem', fontWeight: '800', letterSpacing: '-0.5px', marginBottom: '0.4rem' }}>
           {isLogin
-            ? (isUser ? 'Welcome back 👋' : 'Business Portal')
+            ? (isUser ? 'Welcome' : 'Business Portal')
             : (isUser ? 'Create your account' : 'Register your business')}
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', lineHeight: '1.5' }}>
