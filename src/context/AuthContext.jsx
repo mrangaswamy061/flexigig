@@ -3,6 +3,19 @@ import { API_BASE_URL } from '../config';
 
 const AuthContext = createContext();
 
+const decodeToken = (token) => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(window.atob(base64).split('').map(function(c) {
+      return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+  } catch (err) {
+    return null;
+  }
+};
+
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
@@ -25,11 +38,30 @@ export const AuthProvider = ({ children }) => {
             setUserRole(data.user.role);
             setUserProfile(data.user);
             setIsLoggedIn(true);
+            localStorage.setItem('flexigig_user_profile', JSON.stringify(data.user));
           } else {
             localStorage.removeItem('token');
+            localStorage.removeItem('flexigig_user_profile');
           }
         } catch (e) {
-          console.warn('Failed to validate token', e);
+          console.warn('Failed to validate token with server, using local fallback:', e);
+          const savedProfile = localStorage.getItem('flexigig_user_profile');
+          if (savedProfile) {
+            try {
+              const user = JSON.parse(savedProfile);
+              setUserRole(user.role);
+              setUserProfile(user);
+              setIsLoggedIn(true);
+            } catch (_) {}
+          } else {
+            const decoded = decodeToken(token);
+            if (decoded) {
+              const user = { id: decoded.id, email: decoded.email, role: decoded.role, name: decoded.email.split('@')[0] };
+              setUserRole(user.role);
+              setUserProfile(user);
+              setIsLoggedIn(true);
+            }
+          }
         }
       }
       setIsInitializingAuth(false);
@@ -46,10 +78,12 @@ export const AuthProvider = ({ children }) => {
     // Merge provided fields into userProfile
     const profileData = user || { role, name, email };
     setUserProfile(profileData);
+    localStorage.setItem('flexigig_user_profile', JSON.stringify(profileData));
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('flexigig_user_profile');
     setIsLoggedIn(false);
     setUserRole(null);
     setUserProfile(null);
@@ -59,6 +93,7 @@ export const AuthProvider = ({ children }) => {
     const updatedProfile = { ...userProfile, ...data };
     setUserProfile(updatedProfile);
     setNeedsProfile(false);
+    localStorage.setItem('flexigig_user_profile', JSON.stringify(updatedProfile));
 
     if (userProfile?.email) {
       try {

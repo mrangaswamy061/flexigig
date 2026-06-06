@@ -13,6 +13,33 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from './context/AuthContext';
 import { useJobs } from './context/JobContext';
 
+const StudentRoute = ({ children }) => {
+  const { isLoggedIn, userRole } = useAuth();
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  if (userRole !== 'student') {
+    return <Navigate to={userRole === 'employer' ? "/business/dashboard" : userRole === 'admin' ? "/admin/dashboard" : "/"} />;
+  }
+  return children;
+};
+
+const EmployerRoute = ({ children }) => {
+  const { isLoggedIn, userRole } = useAuth();
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  if (userRole !== 'employer') {
+    return <Navigate to={userRole === 'student' ? "/user/dashboard" : userRole === 'admin' ? "/admin/dashboard" : "/"} />;
+  }
+  return children;
+};
+
+const AdminRoute = ({ children }) => {
+  const { isLoggedIn, userRole } = useAuth();
+  if (!isLoggedIn) return <Navigate to="/login" />;
+  if (userRole !== 'admin') {
+    return <Navigate to={userRole === 'student' ? "/user/dashboard" : userRole === 'employer' ? "/business/dashboard" : "/"} />;
+  }
+  return children;
+};
+
 function App() {
   const { isLoggedIn, userRole, isInitializingAuth, needsProfile, userProfile, updateProfile } = useAuth();
   
@@ -47,16 +74,16 @@ function App() {
           <Route path="/login" element={!isLoggedIn ? <Auth /> : <Navigate to={userRole === 'employer' ? "/business/dashboard" : userRole === 'admin' ? "/admin/dashboard" : "/user/dashboard"} />} />
 
           {/* User Protected Routes */}
-          <Route path="/user/dashboard" element={isLoggedIn && userRole === 'student' ? <Dashboard /> : <Navigate to="/" />} />
-          <Route path="/user/jobs" element={isLoggedIn && userRole === 'student' ? <Jobs /> : <Navigate to="/" />} />
-          <Route path="/user/profile" element={isLoggedIn && userRole === 'student' ? <Profile /> : <Navigate to="/" />} />
+          <Route path="/user/dashboard" element={<StudentRoute><Dashboard /></StudentRoute>} />
+          <Route path="/user/jobs" element={<StudentRoute><Jobs /></StudentRoute>} />
+          <Route path="/user/profile" element={<StudentRoute><Profile /></StudentRoute>} />
 
           {/* Business Owner Protected Routes */}
-          <Route path="/business/dashboard" element={isLoggedIn && userRole === 'employer' ? <EmployerDashboard /> : <Navigate to="/" />} />
-          <Route path="/business/profile" element={isLoggedIn && userRole === 'employer' ? <Profile /> : <Navigate to="/" />} />
+          <Route path="/business/dashboard" element={<EmployerRoute><EmployerDashboard /></EmployerRoute>} />
+          <Route path="/business/profile" element={<EmployerRoute><Profile /></EmployerRoute>} />
 
           {/* Admin Protected Routes */}
-          <Route path="/admin/dashboard" element={isLoggedIn && userRole === 'admin' ? <AdminDashboard /> : <Navigate to="/" />} />
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
 
           {/* Fallback */}
           <Route path="*" element={<Navigate to="/" />} />

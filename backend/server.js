@@ -195,6 +195,11 @@ app.post('/api/auth/login', async (req, res) => {
 // Verify token
 app.get('/api/auth/me', authMiddleware, async (req, res) => {
   try {
+    if (!isMongoConnected()) {
+      const mockUser = mockUsers.find(u => u.id === req.user.id || u.email?.toLowerCase() === req.user.email?.toLowerCase());
+      if (!mockUser) return res.status(404).json({ error: 'User not found (Mock Mode)' });
+      return res.json({ user: mockUser });
+    }
     const user = await User.findById(req.user.id).select('-password');
     if (!user) return res.status(404).json({ error: 'User not found' });
     res.json({ user });

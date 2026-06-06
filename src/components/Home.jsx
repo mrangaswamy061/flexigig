@@ -100,14 +100,14 @@ const Home = () => {
             ) : (
               <>
                 <button 
-                  onClick={() => navigate('/login', { state: { role: 'student', isLogin: true } })} 
+                  onClick={() => navigate('/login?tab=user&mode=login')} 
                   className="btn-primary"
                   style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', display: 'flex', alignItems: 'center', gap: '0.75rem', boxShadow: '0 8px 30px rgba(212, 175, 55, 0.35)' }}
                 >
                   User Log In <ArrowRight size={22} />
                 </button>
                 <button 
-                  onClick={() => navigate('/login', { state: { role: 'employer', isLogin: true } })} 
+                  onClick={() => navigate('/login?tab=business&mode=login')} 
                   style={{ padding: '1.1rem 2.5rem', fontSize: '1.15rem', borderRadius: '16px', background: 'rgba(139, 92, 246, 0.15)', border: '1px solid rgba(139, 92, 246, 0.3)', color: 'var(--accent)', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', transition: 'all 0.3s' }}
                   className="card-hover"
                 >

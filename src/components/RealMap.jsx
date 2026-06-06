@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleMap, useJsApiLoader, Marker, InfoWindow, Polyline } from '@react-google-maps/api';
 import { Loader } from 'lucide-react';
 
@@ -25,6 +25,17 @@ const RealMap = ({
 
   const [map, setMap] = useState(null);
   const [activeMarker, setActiveMarker] = useState(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    if (isLoaded) return;
+    const timer = setTimeout(() => {
+      if (!isLoaded) {
+        setLoadFailed(true);
+      }
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, [isLoaded]);
 
   const onLoad = useCallback(function callback(map) {
     setMap(map);
@@ -37,7 +48,16 @@ const RealMap = ({
   const effectiveCenter = center ? { lat: center[0], lng: center[1] } : { lat: 28.6139, lng: 77.2090 };
   const hasValidCenter = center && Array.isArray(center) && center.length === 2 && !isNaN(center[0]) && !isNaN(center[1]);
 
-  if (!isLoaded || !center) {
+  if (loadFailed && !isLoaded) {
+    return (
+      <div style={{ width: '100%', height: '100%', minHeight: '400px', borderRadius: 'inherit', display: 'flex', flexDirection: 'column', gap: '1rem', justifyContent: 'center', alignItems: 'center', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)', padding: '2rem', textAlign: 'center' }}>
+        <span style={{ fontSize: '1.2rem', fontWeight: 'bold' }}>Map Offline</span>
+        <span style={{ fontSize: '0.9rem' }}>Google Maps could not be loaded. Please check your internet connection.</span>
+      </div>
+    );
+  }
+
+  if (!isLoaded) {
     return (
       <div style={{ width: '100%', height: '100%', minHeight: '600px', borderRadius: 'inherit', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'rgba(255,255,255,0.03)', color: 'var(--text-muted)' }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem' }}>
@@ -117,15 +137,16 @@ const RealMap = ({
       )}
 
       {/* 3. Show all jobs if it is NOT employer view */}
-      {userRole !== 'employer' && jobs.map(job => {
+      {userRole !== 'employer' && jobs.map((job, idx) => {
         if (!job.latlng || !Array.isArray(job.latlng) || job.latlng.length !== 2) return null;
-        const isSelected = (selectedJob && selectedJob.id === job.id) || activeMarker === job.id;
+        const jobId = job.id || job._id || `job-marker-${idx}`;
+        const isSelected = (selectedJob && (selectedJob.id === jobId || selectedJob._id === jobId)) || activeMarker === jobId;
         return (
           <Marker
-            key={job.id}
+            key={jobId}
             position={{ lat: job.latlng[0], lng: job.latlng[1] }}
             icon={job.employerType === 'Local Business' ? employerIcon : myIcon}
-            onClick={() => setActiveMarker(job.id)}
+            onClick={() => setActiveMarker(jobId)}
           >
             {isSelected && (
               <InfoWindow onCloseClick={() => setActiveMarker(null)}>
