@@ -116,6 +116,33 @@ const EmployerDashboard = () => {
     }
   };
 
+  const handleReject = async (app) => {
+    try {
+      const appId = app.id || app._id;
+      const response = await fetch(`${API_BASE_URL}/api/applications/reject`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ applicationId: appId })
+      });
+      if (response.ok) {
+        console.log('Application rejected successfully', appId);
+        if (setApplications) {
+          setApplications(prev => prev.map(a => (a.id === appId || a._id === appId) ? { ...a, status: 'Rejected' } : a));
+        }
+      } else {
+        console.warn('Failed to reject application', response.status);
+        if (setApplications) {
+          setApplications(prev => prev.map(a => (a.id === appId || a._id === appId) ? { ...a, status: 'Rejected' } : a));
+        }
+      }
+    } catch (err) {
+      console.error('Error rejecting application', err);
+      if (setApplications) {
+        setApplications(prev => prev.map(a => (a.id === app.id || a._id === app._id) ? { ...a, status: 'Rejected' } : a));
+      }
+    }
+  };
+
   const handleDeleteJob = async (id) => {
     try {
       await fetch(`${API_BASE_URL}/api/jobs/${id}`, {
@@ -412,48 +439,63 @@ const EmployerDashboard = () => {
                                 <MapPin size={16} /> Location Tracking Active
                               </div>
                               <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
-                                 <button 
-                                   className={app.status === 'Completed' ? 'btn-primary' : app.status === 'Accepted' || app.employerRated ? "btn-secondary" : "btn-primary"} 
-                                   style={{ 
-                                     padding: '0.4rem 0.8rem', 
-                                     fontSize: '0.85rem', 
-                                     flex: 1, 
-                                     background: app.status === 'Completed' && !app.employerRated ? '#fbbf24' : (app.status === 'Accepted' || app.employerRated) ? 'rgba(16, 185, 129, 0.1)' : 'linear-gradient(135deg, #10b981, #059669)', 
-                                     border: (app.status === 'Accepted' || app.employerRated) ? '1px solid #10b981' : 'none',
-                                     color: app.status === 'Completed' && !app.employerRated ? 'black' : (app.status === 'Accepted' || app.employerRated) ? '#10b981' : 'white',
-                                     boxShadow: 'none',
-                                     cursor: (app.status === 'Accepted' && app.status !== 'Completed') || app.employerRated ? 'default' : 'pointer'
-                                   }} 
-                                   onClick={() => {
-                                     if (app.status === 'Completed' && !app.employerRated) {
-                                       setFeedbackTarget(app);
-                                       setShowFeedbackModal(true);
-                                     } else if (app.status !== 'Accepted' && app.status !== 'Completed' && !app.employerRated) {
-                                       handleAccept(app);
-                                     }
-                                   }}
-                                   disabled={(app.status === 'Accepted' && app.status !== 'Completed') || app.employerRated}
-                                 >
-                                   {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate User' : app.status === 'Accepted' ? 'Accepted' : 'Accept'}
-                                 </button>
-                                 <button 
-                                   className="btn-secondary" 
-                                   style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem', flex: 1, cursor: 'pointer' }}
-                                   onClick={() => {
-                                     const studentEmail = app.studentEmail || 'student@example.com';
-                                     setActiveChat(app);
-                                     if (!chatHistory[studentEmail]) {
-                                       setChatHistory(prev => ({
-                                         ...prev,
-                                         [studentEmail]: [
-                                           { sender: 'student', text: `Hi, I applied to your gig: ${job?.title || 'Gig'}. I have relevant skills and am ready to start immediately!`, time: app.appliedAt || '12:00 PM' }
-                                         ]
-                                       }));
-                                     }
-                                   }}
-                                 >
-                                   Message
-                                 </button>
+                                 {app.status === 'Pending' ? (
+                                   <>
+                                     <button 
+                                       className="btn-primary" 
+                                       style={{ 
+                                         padding: '0.4rem 0.8rem', 
+                                         fontSize: '0.85rem', 
+                                         flex: 1, 
+                                         background: 'linear-gradient(135deg, #10b981, #059669)', 
+                                         color: 'white',
+                                         border: 'none',
+                                         cursor: 'pointer'
+                                       }} 
+                                       onClick={() => handleAccept(app)}
+                                     >
+                                       Accept
+                                     </button>
+                                     <button 
+                                       className="btn-primary" 
+                                       style={{ 
+                                         padding: '0.4rem 0.8rem', 
+                                         fontSize: '0.85rem', 
+                                         flex: 1, 
+                                         background: 'linear-gradient(135deg, #ef4444, #b91c1c)', 
+                                         color: 'white',
+                                         border: 'none',
+                                         cursor: 'pointer'
+                                       }} 
+                                       onClick={() => handleReject(app)}
+                                     >
+                                       Reject
+                                     </button>
+                                   </>
+                                 ) : (
+                                   <button 
+                                     className={app.status === 'Completed' ? 'btn-primary' : "btn-secondary"} 
+                                     style={{ 
+                                       padding: '0.4rem 0.8rem', 
+                                       fontSize: '0.85rem', 
+                                       flex: 1, 
+                                       background: app.status === 'Completed' && !app.employerRated ? '#fbbf24' : app.status === 'Rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                                       border: app.status === 'Rejected' ? '1px solid #ef4444' : '1px solid #10b981',
+                                       color: app.status === 'Completed' && !app.employerRated ? 'black' : app.status === 'Rejected' ? '#ef4444' : '#10b981',
+                                       boxShadow: 'none',
+                                       cursor: app.status === 'Completed' && !app.employerRated ? 'pointer' : 'default'
+                                     }} 
+                                     onClick={() => {
+                                       if (app.status === 'Completed' && !app.employerRated) {
+                                         setFeedbackTarget(app);
+                                         setShowFeedbackModal(true);
+                                       }
+                                     }}
+                                     disabled={app.status !== 'Completed' || app.employerRated}
+                                   >
+                                     {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate User' : app.status}
+                                   </button>
+                                 )}
                               </div>
                             </div>
                           );

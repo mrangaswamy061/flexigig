@@ -65,6 +65,14 @@ export const JobProvider = ({ children }) => {
   useEffect(() => {
     fetchJobs();
     fetchApplications();
+
+    // Background polling for real-time status synchronization
+    const interval = setInterval(() => {
+      fetchJobs();
+      fetchApplications();
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const handleSetAppliedJobs = (updater) => {

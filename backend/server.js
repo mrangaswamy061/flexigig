@@ -504,6 +504,30 @@ app.post('/api/applications/accept', async (req, res) => {
   }
 });
 
+app.post('/api/applications/reject', async (req, res) => {
+  try {
+    const { applicationId } = req.body;
+    if (!applicationId) {
+      return res.status(400).json({ error: 'applicationId is required' });
+    }
+
+    if (!isMongoConnected()) {
+      const app = mockApplications.find(a => a.id === applicationId);
+      if (!app) return res.status(404).json({ error: 'Application not found' });
+      app.status = 'Rejected';
+      return res.json({ message: 'Application rejected (Mock Mode)', application: app });
+    }
+
+    const app = await Application.findByIdAndUpdate(applicationId, { status: 'Rejected' }, { new: true });
+    if (!app) {
+      return res.status(404).json({ error: 'Application not found' });
+    }
+    res.json({ message: 'Application rejected successfully', application: app });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Stats API
 app.get('/api/stats', async (req, res) => {
   try {

@@ -19,9 +19,20 @@ const decodeToken = (token) => {
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }) => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState(null); // 'student' (user) or 'employer' (business owner)
-  const [userProfile, setUserProfile] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(() => {
+    return localStorage.getItem('flexigig_is_logged_in') === 'true';
+  });
+  const [userRole, setUserRole] = useState(() => {
+    return localStorage.getItem('flexigig_user_role') || null;
+  });
+  const [userProfile, setUserProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem('flexigig_user_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [isInitializingAuth, setIsInitializingAuth] = useState(true);
   const [needsProfile, setNeedsProfile] = useState(false);
 
@@ -78,11 +89,15 @@ export const AuthProvider = ({ children }) => {
     // Merge provided fields into userProfile
     const profileData = user || { role, name, email };
     setUserProfile(profileData);
+    localStorage.setItem('flexigig_is_logged_in', 'true');
+    localStorage.setItem('flexigig_user_role', role);
     localStorage.setItem('flexigig_user_profile', JSON.stringify(profileData));
   };
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('flexigig_is_logged_in');
+    localStorage.removeItem('flexigig_user_role');
     localStorage.removeItem('flexigig_user_profile');
     setIsLoggedIn(false);
     setUserRole(null);
