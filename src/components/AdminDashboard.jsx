@@ -51,7 +51,7 @@ const AdminDashboard = () => {
             college: u.location || 'Local User',
             major: u.contact || 'No contact',
             status: u.status || 'Active',
-            appliedJobs: applications.filter(a => a.studentId === u._id || a.studentEmail === u.email).map(a => a.jobId)
+            appliedJobs: applications.filter(a => a.studentId === u._id || a.studentEmail === u.email).map(a => a.jobId?.id || a.jobId?._id || a.jobId)
           }));
           const mappedEmployers = data.filter(u => u.role === 'employer').map(u => ({
             id: u._id,
@@ -59,7 +59,7 @@ const AdminDashboard = () => {
             type: u.businessType || 'Business',
             status: u.status || 'Active',
             postedJobs: globalJobs.filter(j => j.postedByEmail === u.email).map(j => j.id),
-            totalHired: applications.filter(a => a.status === 'Hired' && globalJobs.some(j => j.id === a.jobId && j.postedByEmail === u.email)).length
+            totalHired: applications.filter(a => a.status === 'Hired' && globalJobs.some(j => j.id === (a.jobId?.id || a.jobId?._id || a.jobId) && j.postedByEmail === u.email)).length
           }));
           setStudents(mappedStudents);
           setEmployers(mappedEmployers);
@@ -73,7 +73,7 @@ const AdminDashboard = () => {
 
   // Add applications
   applications.slice(-3).forEach(app => {
-    const job = globalJobs.find(j => j.id === app.jobId);
+    const job = globalJobs.find(j => j.id === (app.jobId?.id || app.jobId?._id || app.jobId));
     recentActivities.push({
       icon: FileText,
       color: '#10b981',

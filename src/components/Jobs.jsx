@@ -34,27 +34,30 @@ const Jobs = () => {
     // Reset any existing center to force fresh detection
     setMapCenter(null);
     // Try browser geolocation first
-    // Try browser geolocation first
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          const lat = position.coords.latitude;
-          const lon = position.coords.longitude;
-          if (!isNaN(lat) && !isNaN(lon)) {
-            console.log('🛰️ GPS location obtained', lat, lon);
-            // Use functional update to avoid overwriting later more accurate source
-            setMapCenter(prev => prev ?? [lat, lon]);
-            setDetectedLocationName('Browser GPS Location');
-          }
-        },
-        (error) => {
-          console.warn('Browser geolocation failed, trying IP fallback...', error);
-          fetchIPLocation();
-        },
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-
-  );
-    } else {
+    try {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (position) => {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            if (!isNaN(lat) && !isNaN(lon)) {
+              console.log('🛰️ GPS location obtained', lat, lon);
+              // Use functional update to avoid overwriting later more accurate source
+              setMapCenter(prev => prev ?? [lat, lon]);
+              setDetectedLocationName('Browser GPS Location');
+            }
+          },
+          (error) => {
+            console.warn('Browser geolocation failed, trying IP fallback...', error);
+            fetchIPLocation();
+          },
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } else {
+        fetchIPLocation();
+      }
+    } catch (err) {
+      console.warn('Browser geolocation failed synchronously, trying IP fallback...', err);
       fetchIPLocation();
     }
   };
@@ -182,6 +185,7 @@ const Jobs = () => {
       setAppliedJobs([...appliedJobs, id]);
       const newApp = {
         jobId: id,
+        studentId: userProfile?._id || userProfile?.id,
         studentEmail: userProfile?.email,
         studentName: userProfile?.name || 'Student',
         studentCollege: userProfile?.college || 'University',

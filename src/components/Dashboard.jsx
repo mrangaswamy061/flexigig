@@ -22,7 +22,7 @@ const Dashboard = () => {
     e.preventDefault();
     if (setApplications && feedbackTarget) {
       setApplications(prev => prev.map(a => 
-        (a.jobId === feedbackTarget.id && a.studentEmail === userProfile?.email)
+        ((a.jobId?.id || a.jobId?._id || a.jobId) === feedbackTarget.id && a.studentEmail === userProfile?.email)
           ? { ...a, status: 'Rated' }
           : a
       ));
@@ -37,7 +37,7 @@ const Dashboard = () => {
     e.stopPropagation();
     if (setApplications) {
       setApplications(prev => prev.map(a => 
-        (a.jobId === jobId && a.studentEmail === userProfile?.email) 
+        ((a.jobId?.id || a.jobId?._id || a.jobId) === jobId && a.studentEmail === userProfile?.email) 
           ? { ...a, status: 'Completed' } 
           : a
       ));
@@ -50,7 +50,7 @@ const Dashboard = () => {
     
     // Only calculate for Completed jobs
     const completedApps = myApps.filter(a => a.status === 'Completed');
-    const completedJobIds = completedApps.map(a => a.jobId);
+    const completedJobIds = completedApps.map(a => a.jobId?.id || a.jobId?._id || a.jobId);
     const completedJobs = globalJobs.filter(j => completedJobIds.includes(j.id));
 
     const totalEarned = completedJobs.reduce((sum, job) => {
@@ -71,7 +71,7 @@ const Dashboard = () => {
       studentName: userProfile?.name?.split(' ')[0] || 'Alex',
       studentLocation: userProfile?.location || 'North Campus Dorms, Block B',
       recentGigs: appliedGigDetails.length > 0 ? appliedGigDetails.map(g => {
-        const app = myApps.find(a => a.jobId === g.id);
+        const app = myApps.find(a => (a.jobId?.id || a.jobId?._id || a.jobId) === g.id);
         return {
           id: g.id, title: g.title, company: g.dept, 
           status: app?.status || 'Pending', 

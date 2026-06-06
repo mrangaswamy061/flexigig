@@ -460,7 +460,14 @@ app.post('/api/applications', async (req, res) => {
       mockApplications.push(newApp);
       return res.status(201).json(newApp);
     }
-    const newApp = new Application(req.body);
+    const appData = { ...req.body };
+    if (!appData.studentId && appData.studentEmail) {
+      const user = await User.findOne({ email: appData.studentEmail.toLowerCase() });
+      if (user) {
+        appData.studentId = user._id;
+      }
+    }
+    const newApp = new Application(appData);
     await newApp.save();
     res.status(201).json(newApp);
   } catch (err) {

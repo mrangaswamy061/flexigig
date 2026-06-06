@@ -13,6 +13,7 @@ const EmployerDashboard = () => {
   const { globalJobs, setGlobalJobs, applications, setApplications, fetchJobs } = useJobs();
   const [currentView, setCurrentView] = useState('dashboard');
   const myGigs = globalJobs.filter(job => job.postedByEmail === userProfile?.email);
+  const appliedJobs = applications ? applications.map(app => app.jobId?.id || app.jobId?._id || app.jobId) : [];
   const [showPostModal, setShowPostModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
@@ -178,13 +179,18 @@ const EmployerDashboard = () => {
 
     // 1. Try Browser GPS first (Most accurate)
     const gps = await new Promise((resolve) => {
-      if (!navigator.geolocation) return resolve(null);
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
-        () => resolve(null),
-        { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
-      );
-    });
+      try {
+        if (!navigator.geolocation) return resolve(null);
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve([pos.coords.latitude, pos.coords.longitude]),
+          () => resolve(null),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      } catch (err) {
+        console.warn("Geolocation API call failed synchronously:", err);
+        resolve(null);
+      }
+    }).catch(() => null);
 
     if (gps) {
       latlng = gps;
@@ -369,12 +375,12 @@ const EmployerDashboard = () => {
 
               {/* Recent Applications & Student Tracking */}
               {(() => {
-                const myApplications = applications.filter(app => myGigs.some(g => g.id === app.jobId));
+                const myApplications = applications.filter(app => myGigs.some(g => g.id === (app.jobId?.id || app.jobId?._id || app.jobId)));
                 if (myApplications.length === 0) return null;
 
                 const activeAppId = selectedAppId || (myApplications[0].id || myApplications[0]._id);
                 const activeApp = myApplications.find(app => (app.id === activeAppId || app._id === activeAppId)) || myApplications[0];
-                const appliedJob = myGigs.find(g => g.id === activeApp.jobId);
+                const appliedJob = myGigs.find(g => g.id === (activeApp.jobId?.id || activeApp.jobId?._id || activeApp.jobId));
                 const mockStudentLoc = activeApp.studentLoc || [28.6139, 77.2090]; 
                 return (
                   <div className="glass-panel" style={{ marginBottom: '3rem', padding: '2rem', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.15)' }}>
@@ -382,7 +388,7 @@ const EmployerDashboard = () => {
                     <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
                       <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
                         {myApplications.map((app, idx) => {
-                          const job = myGigs.find(g => g.id === app.jobId);
+                          const job = myGigs.find(g => g.id === (app.jobId?.id || app.jobId?._id || app.jobId));
                           const isSelected = (app.id || app._id) === activeAppId;
                           return (
                             <div 
