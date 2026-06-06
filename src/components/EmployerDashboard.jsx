@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Briefcase, IndianRupee, Clock, MapPin, X, Navigation, Building2, User, Globe, Mail, Star } from 'lucide-react';
-import RealMap from './RealMap';
 import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
@@ -400,115 +399,105 @@ const EmployerDashboard = () => {
                 </button>
               </div>
 
-              {/* Recent Applications & Student Tracking */}
+              {/* Recent Applications */}
               {(() => {
                 const myApplications = applications.filter(app => myGigs.some(g => g.id === (app.jobId?.id || app.jobId?._id || app.jobId)));
                 if (myApplications.length === 0) return null;
 
-                const activeAppId = selectedAppId || (myApplications[0].id || myApplications[0]._id);
-                const activeApp = myApplications.find(app => (app.id === activeAppId || app._id === activeAppId)) || myApplications[0];
-                const appliedJob = myGigs.find(g => g.id === (activeApp.jobId?.id || activeApp.jobId?._id || activeApp.jobId));
-                const mockStudentLoc = activeApp.studentLoc || [28.6139, 77.2090]; 
                 return (
                   <div className="glass-panel" style={{ marginBottom: '3rem', padding: '2rem', border: '1px solid rgba(139, 92, 246, 0.4)', boxShadow: '0 10px 40px rgba(139, 92, 246, 0.15)' }}>
-                    <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '1.5rem', color: 'white' }}>Recent Applications & Live Tracking</h3>
-                    <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-                      <div style={{ flex: '1 1 300px', display: 'flex', flexDirection: 'column', gap: '1rem', maxHeight: '350px', overflowY: 'auto' }} className="custom-scrollbar">
-                        {myApplications.map((app, idx) => {
-                          const job = myGigs.find(g => g.id === (app.jobId?.id || app.jobId?._id || app.jobId));
-                          const isSelected = (app.id || app._id) === activeAppId;
-                          return (
-                            <div 
-                              key={idx} 
-                              onClick={() => setSelectedAppId(app.id || app._id)}
-                              style={{ 
-                                background: isSelected ? 'rgba(139, 92, 246, 0.12)' : 'rgba(255,255,255,0.04)', 
-                                padding: '1.25rem', 
-                                borderRadius: '16px', 
-                                borderLeft: isSelected ? '4px solid var(--accent)' : '4px solid #10b981',
-                                border: isSelected ? '1px solid rgba(139, 92, 246, 0.3)' : '1px solid transparent',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease-in-out'
-                              }}
-                            >
-                              <h4 style={{ fontSize: '1.15rem', fontWeight: '700', marginBottom: '0.2rem' }}>{app.studentName}</h4>
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '0.5rem' }}>{app.studentCollege} • {app.studentMajor}</p>
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Applied for: <strong style={{ color: 'white' }}>{job?.title}</strong></p>
-                              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Location: <strong style={{ color: 'white' }}>{job?.location}</strong></p>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: '#10b981', fontWeight: '600', fontSize: '0.85rem' }}>
-                                <MapPin size={16} /> Location Tracking Active
-                              </div>
-                              <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }} onClick={e => e.stopPropagation()}>
-                                 {app.status === 'Pending' ? (
-                                   <>
-                                     <button 
-                                       className="btn-primary" 
-                                       style={{ 
-                                         padding: '0.4rem 0.8rem', 
-                                         fontSize: '0.85rem', 
-                                         flex: 1, 
-                                         background: 'linear-gradient(135deg, #10b981, #059669)', 
-                                         color: 'white',
-                                         border: 'none',
-                                         cursor: 'pointer'
-                                       }} 
-                                       onClick={() => handleAccept(app)}
-                                     >
-                                       Accept
-                                     </button>
-                                     <button 
-                                       className="btn-primary" 
-                                       style={{ 
-                                         padding: '0.4rem 0.8rem', 
-                                         fontSize: '0.85rem', 
-                                         flex: 1, 
-                                         background: 'linear-gradient(135deg, #ef4444, #b91c1c)', 
-                                         color: 'white',
-                                         border: 'none',
-                                         cursor: 'pointer'
-                                       }} 
-                                       onClick={() => handleReject(app)}
-                                     >
-                                       Reject
-                                     </button>
-                                   </>
-                                 ) : (
-                                   <button 
-                                     className={app.status === 'Completed' ? 'btn-primary' : "btn-secondary"} 
-                                     style={{ 
-                                       padding: '0.4rem 0.8rem', 
-                                       fontSize: '0.85rem', 
-                                       flex: 1, 
-                                       background: app.status === 'Completed' && !app.employerRated ? '#fbbf24' : app.status === 'Rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
-                                       border: app.status === 'Rejected' ? '1px solid #ef4444' : '1px solid #10b981',
-                                       color: app.status === 'Completed' && !app.employerRated ? 'black' : app.status === 'Rejected' ? '#ef4444' : '#10b981',
-                                       boxShadow: 'none',
-                                       cursor: app.status === 'Completed' && !app.employerRated ? 'pointer' : 'default'
-                                     }} 
-                                     onClick={() => {
-                                       if (app.status === 'Completed' && !app.employerRated) {
-                                         setFeedbackTarget(app);
-                                         setShowFeedbackModal(true);
-                                       }
-                                     }}
-                                     disabled={app.status !== 'Completed' || app.employerRated}
-                                   >
-                                     {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate User' : app.status}
-                                   </button>
-                                 )}
-                              </div>
+                    <h3 style={{ fontSize: '1.75rem', fontWeight: '800', marginBottom: '1.5rem', color: 'white' }}>Recent Applications</h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
+                      {myApplications.map((app, idx) => {
+                        const job = myGigs.find(g => g.id === (app.jobId?.id || app.jobId?._id || app.jobId));
+                        return (
+                          <div 
+                            key={idx} 
+                            style={{ 
+                              background: 'rgba(255,255,255,0.04)', 
+                              padding: '1.5rem', 
+                              borderRadius: '16px', 
+                              border: '1px solid rgba(255, 255, 255, 0.08)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              justifyContent: 'space-between',
+                              transition: 'all 0.2s ease-in-out'
+                            }}
+                          >
+                            <div>
+                              <h4 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.3rem', color: 'white' }}>{app.studentName}</h4>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '0.75rem' }}>{app.studentCollege} • {app.studentMajor}</p>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '0.4rem' }}>Applied for: <strong style={{ color: 'white' }}>{job?.title}</strong></p>
+                              <p style={{ color: 'var(--text-muted)', fontSize: '0.95rem', marginBottom: '1rem' }}>Location: <strong style={{ color: 'white' }}>{job?.location}</strong></p>
                             </div>
-                          );
-                        })}
-                      </div>
-                      <div style={{ flex: '2 1 400px', height: '350px', borderRadius: '16px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <RealMap 
-                          userRole="employer"
-                          center={mockStudentLoc}
-                          employerJob={appliedJob}
-                          studentLocation={mockStudentLoc}
-                        />
-                      </div>
+                            <div style={{ marginTop: '0.75rem', display: 'flex', gap: '0.5rem' }}>
+                              {app.status === 'Pending' ? (
+                                <>
+                                  <button 
+                                    className="btn-primary" 
+                                    style={{ 
+                                      padding: '0.5rem 1rem', 
+                                      fontSize: '0.9rem', 
+                                      flex: 1, 
+                                      background: 'linear-gradient(135deg, #10b981, #059669)', 
+                                      color: 'white',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      borderRadius: '8px',
+                                      fontWeight: '600'
+                                    }} 
+                                    onClick={() => handleAccept(app)}
+                                  >
+                                    Accept
+                                  </button>
+                                  <button 
+                                    className="btn-primary" 
+                                    style={{ 
+                                      padding: '0.5rem 1rem', 
+                                      fontSize: '0.9rem', 
+                                      flex: 1, 
+                                      background: 'linear-gradient(135deg, #ef4444, #b91c1c)', 
+                                      color: 'white',
+                                      border: 'none',
+                                      cursor: 'pointer',
+                                      borderRadius: '8px',
+                                      fontWeight: '600'
+                                    }} 
+                                    onClick={() => handleReject(app)}
+                                  >
+                                    Reject
+                                  </button>
+                                </>
+                              ) : (
+                                <button 
+                                  className={app.status === 'Completed' ? 'btn-primary' : "btn-secondary"} 
+                                  style={{ 
+                                    padding: '0.5rem 1rem', 
+                                    fontSize: '0.9rem', 
+                                    flex: 1, 
+                                    background: app.status === 'Completed' && !app.employerRated ? '#fbbf24' : app.status === 'Rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(16, 185, 129, 0.1)', 
+                                    border: app.status === 'Rejected' ? '1px solid #ef4444' : '1px solid #10b981',
+                                    color: app.status === 'Completed' && !app.employerRated ? 'black' : app.status === 'Rejected' ? '#ef4444' : '#10b981',
+                                    boxShadow: 'none',
+                                    borderRadius: '8px',
+                                    fontWeight: '600',
+                                    cursor: app.status === 'Completed' && !app.employerRated ? 'pointer' : 'default'
+                                  }} 
+                                  onClick={() => {
+                                    if (app.status === 'Completed' && !app.employerRated) {
+                                      setFeedbackTarget(app);
+                                      setShowFeedbackModal(true);
+                                    }
+                                  }}
+                                  disabled={app.status !== 'Completed' || app.employerRated}
+                                >
+                                  {app.employerRated ? 'Rated' : app.status === 'Completed' ? 'Rate User' : app.status}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 );
